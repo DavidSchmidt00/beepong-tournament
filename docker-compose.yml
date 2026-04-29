@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: beerpong
+      POSTGRES_USER: beerpong
+      POSTGRES_PASSWORD: beerpong
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beerpong"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
