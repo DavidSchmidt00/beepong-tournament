@@ -63,6 +63,16 @@ def calculate_standings(teams: list[dict], matches: list[dict]) -> list[dict]:
     return sorted(stats.values(), key=lambda s: (-s["wins"], -s["cup_diff"]))
 
 
+def generate_direct_ko_bracket(teams: list[dict]) -> list[dict]:
+    """Generate KO matches directly for 4 teams (no group stage). Teams must be pre-shuffled."""
+    return [
+        {"team_a_id": teams[0]["id"], "team_b_id": teams[1]["id"], "round": MatchRound.semifinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": teams[2]["id"], "team_b_id": teams[3]["id"], "round": MatchRound.semifinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": None, "team_b_id": None, "round": MatchRound.final, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": None, "team_b_id": None, "round": MatchRound.third_place, "group": None, "status": MatchStatus.pending},
+    ]
+
+
 def get_ko_pairings(standings_a: list[dict], standings_b: list[dict]) -> list[dict]:
     """
     Generate KO matches from top-2 of each group.

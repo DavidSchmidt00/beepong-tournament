@@ -87,45 +87,50 @@
   {% endif %}
 
   {% if pending_matches %}
-  <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-    <span>Spielplan</span>
-    {% if tournament.status.value == 'group_stage' and pending_matches|length > 1 %}
-    <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: normal;">↕ ziehen zum Sortieren</span>
-    {% endif %}
+  <div class="section-title" style="margin-top: 1.5rem;">
+    <span style="font-size: 1.2rem; color: var(--primary);">🔥 Jetzt am Tisch</span>
   </div>
 
   <div id="match-queue" style="display: flex; flex-direction: column; gap: 0.6rem;">
   {% for match in pending_matches %}
     {% if match.team_a_id and match.team_b_id %}
     {% set pos = loop.index0 %}
+    {% if pos == 1 %}
+      <div class="queue-divider ignore-elements" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.4rem;">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;">Kommende Spiele</span>
+        {% if tournament.status.value == 'group_stage' %}
+        <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: normal;">↕ ziehen zum Sortieren</span>
+        {% endif %}
+      </div>
+    {% endif %}
     <div class="queue-item"
          data-match-id="{{ match.id }}"
          data-team-a-label="{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}"
          data-team-b-label="{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}"
          data-team-a-id="{{ match.team_a_id }}"
          data-team-b-id="{{ match.team_b_id }}"
-         style="display: flex; align-items: center; gap: 0.75rem; border-radius: var(--radius-md); padding: 0.75rem 0.85rem; transition: opacity 0.2s, border-color 0.2s;
-                {% if pos == 0 %}border: 1px solid rgba(245,158,11,0.5); background: rgba(245,158,11,0.05);
-                {% elif pos == 1 %}border: 1px solid var(--border-color); background: rgba(255,255,255,0.03); opacity: 0.75;
-                {% else %}border: 1px solid var(--border-color); background: rgba(255,255,255,0.02); opacity: 0.5;{% endif %}">
+         style="display: flex; align-items: center; gap: 0.75rem; border-radius: var(--radius-md); transition: all 0.3s ease; position: relative;
+                {% if pos == 0 %}border: 2px solid var(--primary); background: rgba(245,158,11,0.08); padding: 1.25rem 1rem; transform: scale(1.02); box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.2); z-index: 10; opacity: 1;
+                {% elif pos == 1 %}border: 1px solid var(--border-color); background: rgba(255,255,255,0.03); padding: 0.75rem 0.85rem; z-index: 1; opacity: 0.75;
+                {% else %}border: 1px solid var(--border-color); background: rgba(255,255,255,0.02); padding: 0.75rem 0.85rem; z-index: 1; opacity: 0.5;{% endif %}">
       {% if tournament.status.value == 'group_stage' and pending_matches|length > 1 %}
       <div class="drag-handle" style="color: var(--text-muted); cursor: grab; font-size: 1.1rem; flex-shrink: 0; padding: 0 0.1rem; line-height: 1; user-select: none;">⠿</div>
       {% endif %}
       <div style="flex: 1; min-width: 0;">
-        <div style="font-size: 0.95rem; font-weight: 600; {% if pos == 0 %}color: var(--primary);{% endif %}">
+        <div style="font-weight: 600; transition: all 0.3s ease; {% if pos == 0 %}color: var(--primary); font-size: 1.1rem;{% else %}font-size: 0.95rem;{% endif %}">
           {{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}
           <span style="color: var(--text-muted); font-weight: 400; font-size: 0.85rem;"> vs </span>
           {{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}
         </div>
-        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
           {% if match.round.value == 'group' %}Gruppe {{ match.group }}{% elif match.round.value == 'semifinal' %}Halbfinale{% elif match.round.value == 'final' %}Finale{% else %}Spiel um Platz 3{% endif %}
           · {{ team_map[match.team_a_id].player1 }} &amp; {{ team_map[match.team_b_id].player1 }}
         </div>
       </div>
       {% if pos == 0 %}
-        <button class="btn" style="flex-shrink: 0; padding: 0.45rem 0.75rem; font-size: 0.75rem; white-space: nowrap;"
+        <button class="btn" style="flex-shrink: 0; padding: 0.6rem 1rem; font-size: 0.85rem; white-space: nowrap;"
           onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})">
-          Ergebnis
+          Ergebnis eintragen
         </button>
       {% elif pos == 1 %}
         <span class="pos-badge" style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;">Danach</span>
@@ -144,6 +149,7 @@
 
       Sortable.create(list, {
         handle: '.drag-handle',
+        filter: '.ignore-elements',
         animation: 150,
         onEnd: function() {
           updateStyles();
@@ -158,26 +164,56 @@
       });
 
       function updateStyles() {
-        list.querySelectorAll('.queue-item').forEach((el, i) => {
-          // Border & background
+        const items = list.querySelectorAll('.queue-item');
+        
+        let div = list.querySelector('.queue-divider');
+        if (items.length > 1) {
+          if (!div) {
+            div = document.createElement('div');
+            div.className = 'queue-divider ignore-elements';
+            div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.4rem;';
+            div.innerHTML = '<span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;">Kommende Spiele</span>' + 
+                            '{% if tournament.status.value == "group_stage" %}<span style="font-size: 0.6rem; color: var(--text-muted); font-weight: normal;">↕ ziehen zum Sortieren</span>{% endif %}';
+          }
+          list.insertBefore(div, items[1]);
+        } else if (div) {
+          div.remove();
+        }
+
+        items.forEach((el, i) => {
           if (i === 0) {
-            el.style.border = '1px solid rgba(245,158,11,0.5)';
-            el.style.background = 'rgba(245,158,11,0.05)';
+            el.style.border = '2px solid var(--primary)';
+            el.style.background = 'rgba(245,158,11,0.08)';
+            el.style.padding = '1.25rem 1rem';
+            el.style.transform = 'scale(1.02)';
+            el.style.boxShadow = '0 10px 25px -5px rgba(245, 158, 11, 0.2)';
             el.style.opacity = '1';
+            el.style.zIndex = '10';
+            el.style.position = 'relative';
           } else if (i === 1) {
             el.style.border = '1px solid var(--border-color)';
             el.style.background = 'rgba(255,255,255,0.03)';
+            el.style.padding = '0.75rem 0.85rem';
+            el.style.transform = 'none';
+            el.style.boxShadow = 'none';
             el.style.opacity = '0.75';
+            el.style.zIndex = '1';
           } else {
             el.style.border = '1px solid var(--border-color)';
             el.style.background = 'rgba(255,255,255,0.02)';
+            el.style.padding = '0.75rem 0.85rem';
+            el.style.transform = 'none';
+            el.style.boxShadow = 'none';
             el.style.opacity = '0.5';
+            el.style.zIndex = '1';
           }
-          // Team name color
+          
           const nameEl = el.querySelector('div > div:first-child');
-          if (nameEl) nameEl.style.color = i === 0 ? 'var(--primary)' : '';
+          if (nameEl) {
+             nameEl.style.color = i === 0 ? 'var(--primary)' : '';
+             nameEl.style.fontSize = i === 0 ? '1.1rem' : '0.95rem';
+          }
 
-          // Ergebnis button & Danach badge
           let btn = el.querySelector('button.btn');
           let badge = el.querySelector('.pos-badge');
 
@@ -186,9 +222,13 @@
               badge && badge.remove();
               btn = document.createElement('button');
               btn.className = 'btn';
-              btn.style.cssText = 'flex-shrink:0;padding:0.45rem 0.75rem;font-size:0.75rem;white-space:nowrap;';
-              btn.textContent = 'Ergebnis';
+              btn.style.cssText = 'flex-shrink:0;padding:0.6rem 1rem;font-size:0.85rem;white-space:nowrap;';
+              btn.textContent = 'Ergebnis eintragen';
               el.appendChild(btn);
+            } else {
+              btn.style.padding = '0.6rem 1rem';
+              btn.style.fontSize = '0.85rem';
+              btn.textContent = 'Ergebnis eintragen';
             }
             const aLabel = el.dataset.teamALabel;
             const bLabel = el.dataset.teamBLabel;
@@ -217,12 +257,13 @@
 
   {% endif %}
 
+  {% if standings_a or standings_b %}
   <div class="grid-2 mt-6">
     <div>
       <div class="section-title">Gruppe A</div>
       <div class="table-wrapper">
         <table class="standings">
-          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederl.</th><th>Diff.</th></tr>
+          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederlagen</th><th>Diff.</th></tr>
           {% for s in standings_a %}
           <tr style="position: relative;">
             <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
@@ -248,7 +289,7 @@
       <div class="section-title">Gruppe B</div>
       <div class="table-wrapper">
         <table class="standings">
-          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederl.</th><th>Diff.</th></tr>
+          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederlagen</th><th>Diff.</th></tr>
           {% for s in standings_b %}
           <tr style="position: relative;">
             <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
@@ -270,6 +311,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
   {% if ko_matches %}
   <div class="section-title" style="margin-top: 3rem;">K.O.-Phase</div>
@@ -286,7 +328,7 @@
           <div>{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ team_map[match.team_a_id].player1 }} & {{ team_map[match.team_a_id].player2 }}</div>
         {% else %}
-          <span style="color:var(--text-muted);font-weight:normal;">TBD</span>
+          <span style="color:var(--text-muted);font-weight:normal;">Offen</span>
         {% endif %}
       </div>
       <div class="vs">vs</div>
@@ -295,7 +337,7 @@
           <div>{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}</div>
           <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ team_map[match.team_b_id].player1 }} & {{ team_map[match.team_b_id].player2 }}</div>
         {% else %}
-          <span style="color:var(--text-muted);font-weight:normal;">TBD</span>
+          <span style="color:var(--text-muted);font-weight:normal;">Offen</span>
         {% endif %}
       </div>
     </div>
@@ -304,7 +346,7 @@
     <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem; font-weight: 700; color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
       <span style="flex: 1;">🏆 {{ team_map[match.winner_id].name }} gewinnt ({{ match.cups_a }} : {{ match.cups_b }})</span>
       <form method="post" action="/matches/{{ match.id }}/undo" style="margin: 0;">
-        <button type="submit" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: var(--danger);" title="Rückgängig">↩ Undo</button>
+        <button type="submit" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: var(--danger);" title="Rückgängig">↩ Rückgängig</button>
       </form>
     </div>
     {% endif %}
@@ -329,7 +371,7 @@
         </div>
 
         <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: var(--radius-md); text-align: center; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
-          <label style="color: var(--primary); font-size: 1rem; margin-bottom: 1rem; display: block;">Übrig gebliebene Cups (Gewinner)</label>
+          <label style="color: var(--primary); font-size: 1rem; margin-bottom: 1rem; display: block;">Verbleibende Becher (Sieger)</label>
           <div style="display: flex; align-items: center; justify-content: center; gap: 1.5rem;">
             <button type="button" class="btn btn-secondary" style="width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; padding: 0;" onclick="changeCups(-1)">−</button>
             <input type="number" id="modal-cups-left" min="0" max="10" value="0" required style="font-size: 2rem; text-align: center; padding: 0.5rem; max-width: 80px; background: transparent; border: none; font-weight: 800; color: var(--primary);">

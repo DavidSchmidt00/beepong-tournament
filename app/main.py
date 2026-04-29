@@ -92,6 +92,7 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
     num_players = int(form.get("num_players", 12))
     admin_password = form.get("admin_password", "")
     num_teams = num_players // 2
+    initial_status = TournamentStatus.knockout if num_teams <= 4 else TournamentStatus.group_stage
 
     teams_input = [
         {
@@ -106,7 +107,7 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
 
     tournament = Tournament(
         title=title,
-        status=TournamentStatus.group_stage,
+        status=initial_status,
         admin_password_hash=hash_password(admin_password),
         num_players=num_players,
     )
@@ -127,14 +128,19 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
         team_objs.append(t)
     db.flush()
 
-    team_dicts = [{"id": t.id, "name": t.name, "group": None} for t in team_objs]
-    group_a_dicts, group_b_dicts = tour_logic.split_into_groups(team_dicts)
+    if num_teams <= 4:
+        for t in team_objs:
+            t.group = "A"
+        team_dicts = [{"id": t.id, "name": t.name} for t in team_objs]
+        match_specs = tour_logic.generate_direct_ko_bracket(team_dicts)
+    else:
+        team_dicts = [{"id": t.id, "name": t.name, "group": None} for t in team_objs]
+        group_a_dicts, group_b_dicts = tour_logic.split_into_groups(team_dicts)
+        group_a_ids = {d["id"] for d in group_a_dicts}
+        for t in team_objs:
+            t.group = "A" if t.id in group_a_ids else "B"
+        match_specs = tour_logic.generate_round_robin(group_a_dicts, "A") + tour_logic.generate_round_robin(group_b_dicts, "B")
 
-    group_a_ids = {d["id"] for d in group_a_dicts}
-    for t in team_objs:
-        t.group = "A" if t.id in group_a_ids else "B"
-
-    match_specs = tour_logic.generate_round_robin(group_a_dicts, "A") + tour_logic.generate_round_robin(group_b_dicts, "B")
     for ms in match_specs:
         db.add(Match(tournament_id=tournament.id, **ms))
 
@@ -149,7 +155,7 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
 
 def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
     teams = tournament.teams
-    matches = tournament.matches
+    matches = sorted(tournament.matches, key=lambda m: m.id)
 
     group_a_teams = [t for t in teams if t.group == "A"]
     group_b_teams = [t for t in teams if t.group == "B"]
