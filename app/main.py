@@ -135,13 +135,25 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
             t.group = "A"
         team_dicts = [{"id": t.id, "name": t.name} for t in team_objs]
         match_specs = tour_logic.generate_direct_ko_bracket(team_dicts)
-    else:
+    elif num_teams <= 8:
         team_dicts = [{"id": t.id, "name": t.name, "group": None} for t in team_objs]
         group_a_dicts, group_b_dicts = tour_logic.split_into_groups(team_dicts)
         group_a_ids = {d["id"] for d in group_a_dicts}
         for t in team_objs:
             t.group = "A" if t.id in group_a_ids else "B"
         match_specs = tour_logic.generate_round_robin(group_a_dicts, "A") + tour_logic.generate_round_robin(group_b_dicts, "B")
+    else:
+        team_dicts = [{"id": t.id, "name": t.name, "group": None} for t in team_objs]
+        ga, gb, gc, gd = tour_logic.split_into_four_groups(team_dicts)
+        group_map = {d["id"]: g for g, grp in zip(["A", "B", "C", "D"], [ga, gb, gc, gd]) for d in grp}
+        for t in team_objs:
+            t.group = group_map[t.id]
+        match_specs = (
+            tour_logic.generate_round_robin(ga, "A") +
+            tour_logic.generate_round_robin(gb, "B") +
+            tour_logic.generate_round_robin(gc, "C") +
+            tour_logic.generate_round_robin(gd, "D")
+        )
 
     for ms in match_specs:
         db.add(Match(tournament_id=tournament.id, **ms))
@@ -165,11 +177,7 @@ def _players_label(team) -> str:
 def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
     teams = tournament.teams
     matches = sorted(tournament.matches, key=lambda m: m.id)
-
-    group_a_teams = [t for t in teams if t.group == "A"]
-    group_b_teams = [t for t in teams if t.group == "B"]
-    group_a_matches = [m for m in matches if m.group == "A" and m.round == MatchRound.group]
-    group_b_matches = [m for m in matches if m.group == "B" and m.round == MatchRound.group]
+    group_labels = sorted({t.group for t in teams})
 
     def to_dict(m: Match) -> dict:
         return {
@@ -184,14 +192,19 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
             "cups_b": m.cups_b,
         }
 
-    team_dicts_a = [{"id": t.id, "name": t.name, "group": t.group} for t in group_a_teams]
-    team_dicts_b = [{"id": t.id, "name": t.name, "group": t.group} for t in group_b_teams]
+    def standings_for(label: str) -> list[dict]:
+        grp_teams = [{"id": t.id, "name": t.name} for t in teams if t.group == label]
+        grp_matches = [to_dict(m) for m in matches if m.group == label and m.round == MatchRound.group]
+        return tour_logic.calculate_standings(grp_teams, grp_matches)
 
-    standings_a = tour_logic.calculate_standings(team_dicts_a, [to_dict(m) for m in group_a_matches])
-    standings_b = tour_logic.calculate_standings(team_dicts_b, [to_dict(m) for m in group_b_matches])
+    standings_by_group = {label: standings_for(label) for label in group_labels}
+    standings_a = standings_by_group.get("A", [])
+    standings_b = standings_by_group.get("B", [])
+    standings_c = standings_by_group.get("C", [])
+    standings_d = standings_by_group.get("D", [])
 
     team_map = {t.id: t for t in teams}
-    for s in standings_a + standings_b:
+    for s in standings_a + standings_b + standings_c + standings_d:
         s["name"] = team_map[s["team_id"]].name
         s["emoji"] = team_map[s["team_id"]].emoji
         s["player1"] = team_map[s["team_id"]].player1
@@ -258,7 +271,7 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
 
     # 3. Add all other teams based on group stage performance
     ranked_ids = {r["team_id"] for r in overall_ranking}
-    all_standings = standings_a + standings_b
+    all_standings = standings_a + standings_b + standings_c + standings_d
     all_standings.sort(key=lambda x: (x["wins"], x["cup_diff"]), reverse=True)
     
     for s in all_standings:
@@ -280,6 +293,9 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
         "next_match_id": tournament.next_match_id,
         "standings_a": standings_a,
         "standings_b": standings_b,
+        "standings_c": standings_c,
+        "standings_d": standings_d,
+        "group_labels": group_labels,
         "pending_matches": pending_matches,
         "completed_count": completed_count,
         "total_count": len(matches),
@@ -336,6 +352,18 @@ def post_result(
             tournament.status = TournamentStatus.knockout
 
     db.expire(tournament, ["matches"])
+
+    # QF → SF: fill semifinal slots once all quarterfinals are done
+    qf_matches = [m for m in tournament.matches if m.round == MatchRound.quarterfinal]
+    if qf_matches and all(m.status == MatchStatus.completed for m in qf_matches):
+        semis = [m for m in tournament.matches if m.round == MatchRound.semifinal]
+        if semis and semis[0].team_a_id is None:
+            # QF order: QF1/QF2 winners → SF1, QF3/QF4 winners → SF2
+            semis[0].team_a_id = qf_matches[0].winner_id
+            semis[0].team_b_id = qf_matches[1].winner_id
+            semis[1].team_a_id = qf_matches[2].winner_id
+            semis[1].team_b_id = qf_matches[3].winner_id
+
     semis = [m for m in tournament.matches if m.round == MatchRound.semifinal]
     if semis and all(m.status == MatchStatus.completed for m in semis):
         final = next((m for m in tournament.matches if m.round == MatchRound.final), None)
@@ -456,10 +484,8 @@ def post_set_next_match(
 
 def _generate_ko_matches(tournament: Tournament, db: Session) -> None:
     teams = tournament.teams
-    group_a_teams = [{"id": t.id, "name": t.name, "group": t.group} for t in teams if t.group == "A"]
-    group_b_teams = [{"id": t.id, "name": t.name, "group": t.group} for t in teams if t.group == "B"]
-    group_a_matches = [m for m in tournament.matches if m.group == "A" and m.round == MatchRound.group]
-    group_b_matches = [m for m in tournament.matches if m.group == "B" and m.round == MatchRound.group]
+    group_labels = sorted({t.group for t in teams})
+    four_groups = len(group_labels) == 4
 
     def to_dict(m: Match) -> dict:
         return {
@@ -468,10 +494,20 @@ def _generate_ko_matches(tournament: Tournament, db: Session) -> None:
             "winner_id": m.winner_id, "cups_a": m.cups_a, "cups_b": m.cups_b,
         }
 
-    standings_a = tour_logic.calculate_standings(group_a_teams, [to_dict(m) for m in group_a_matches])
-    standings_b = tour_logic.calculate_standings(group_b_teams, [to_dict(m) for m in group_b_matches])
+    def standings_for(label: str):
+        grp_teams = [{"id": t.id, "name": t.name} for t in teams if t.group == label]
+        grp_matches = [to_dict(m) for m in tournament.matches if m.group == label and m.round == MatchRound.group]
+        return tour_logic.calculate_standings(grp_teams, grp_matches)
 
-    for ks in tour_logic.get_ko_pairings(standings_a, standings_b):
+    if four_groups:
+        pairings = tour_logic.generate_quarterfinals(
+            standings_for("A"), standings_for("B"),
+            standings_for("C"), standings_for("D"),
+        )
+    else:
+        pairings = tour_logic.get_ko_pairings(standings_for("A"), standings_for("B"))
+
+    for ks in pairings:
         db.add(Match(
             tournament_id=tournament.id,
             team_a_id=ks["team_a_id"],

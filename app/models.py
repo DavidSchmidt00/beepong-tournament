@@ -14,6 +14,7 @@ class TournamentStatus(str, enum.Enum):
 
 class MatchRound(str, enum.Enum):
     group = "group"
+    quarterfinal = "quarterfinal"
     semifinal = "semifinal"
     final = "final"
     third_place = "third_place"
@@ -49,7 +50,7 @@ class Team(Base):
     emoji: Mapped[str] = mapped_column(String(10), default="🍺")
     player1: Mapped[str | None] = mapped_column(String(50), nullable=True)
     player2: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    group: Mapped[str] = mapped_column(String(1))  # "A" or "B"
+    group: Mapped[str] = mapped_column(String(2))  # "A", "B", "C" or "D"
 
     tournament: Mapped["Tournament"] = relationship(back_populates="teams")
     matches_as_a: Mapped[list["Match"]] = relationship(foreign_keys="Match.team_a_id", back_populates="team_a")

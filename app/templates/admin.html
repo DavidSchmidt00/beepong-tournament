@@ -124,7 +124,7 @@
           {{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}
         </div>
         <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
-          {% if match.round.value == 'group' %}Gruppe {{ match.group }}{% elif match.round.value == 'semifinal' %}Halbfinale{% elif match.round.value == 'final' %}Finale{% else %}Spiel um Platz 3{% endif %}
+          {% if match.round.value == 'group' %}Gruppe {{ match.group }}{% elif match.round.value == 'quarterfinal' %}Viertelfinale{% elif match.round.value == 'semifinal' %}Halbfinale{% elif match.round.value == 'final' %}Finale{% else %}Spiel um Platz 3{% endif %}
           · {{ team_map[match.team_a_id].player1 }} &amp; {{ team_map[match.team_b_id].player1 }}
         </div>
       </div>
@@ -260,13 +260,16 @@
 
   {% set has_group_matches = all_matches|selectattr('round.value','eq','group')|list|length > 0 %}
   {% if has_group_matches %}
+  {% set all_group_standings = [('A', standings_a), ('B', standings_b), ('C', standings_c), ('D', standings_d)] %}
+  {% set active_groups = all_group_standings | selectattr('1') | list %}
   <div class="grid-2 mt-6">
+    {% for group_label, standings in active_groups %}
     <div>
-      <div class="section-title">Gruppe A</div>
+      <div class="section-title">Gruppe {{ group_label }}</div>
       <div class="table-wrapper">
         <table class="standings">
           <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederlagen</th><th>Diff.</th></tr>
-          {% for s in standings_a %}
+          {% for s in standings %}
           <tr style="position: relative;">
             <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
               {{ loop.index }}
@@ -286,32 +289,7 @@
         </table>
       </div>
     </div>
-
-    <div>
-      <div class="section-title">Gruppe B</div>
-      <div class="table-wrapper">
-        <table class="standings">
-          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederlagen</th><th>Diff.</th></tr>
-          {% for s in standings_b %}
-          <tr style="position: relative;">
-            <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
-              {{ loop.index }}
-            </td>
-            <td style="font-weight: {{ '600' if loop.index <= 2 else '400' }};">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                {{ s.emoji }} {{ s.name }}
-                {% if s.is_on_fire %}<span class="on-fire" style="font-size: 0.9rem;">🔥</span>{% endif %}
-              </div>
-              {% if s.player1 or s.player2 %}<div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }}{% if s.player1 and s.player2 %} &amp; {% endif %}{{ s.player2 }}</div>{% endif %}
-            </td>
-            <td class="text-success">{{ s.wins }}</td>
-            <td class="text-danger">{{ s.losses }}</td>
-            <td style="font-weight: 700; color: {{ 'var(--success)' if s.cup_diff > 0 else 'var(--danger)' if s.cup_diff < 0 else 'inherit' }}">{{ s.cup_diff }}</td>
-          </tr>
-          {% endfor %}
-        </table>
-      </div>
-    </div>
+    {% endfor %}
   </div>
   {% endif %}
 
@@ -321,7 +299,7 @@
   {% for match in ko_matches %}
   <div class="match-card">
     <div class="meta" style="margin-bottom: 0.5rem; margin-top: 0;">
-      {% if match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}🏆 Finale 🏆{% else %}Spiel um Platz 3{% endif %}
+      {% if match.round.value=='quarterfinal' %}Viertelfinale{% elif match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}🏆 Finale 🏆{% else %}Spiel um Platz 3{% endif %}
     </div>
     
     <div class="team-container" {% if match.status.value=='pending' and match.team_a_id and match.team_b_id %}onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})"{% endif %}>

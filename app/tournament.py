@@ -9,6 +9,20 @@ def split_into_groups(teams: list[dict]) -> tuple[list[dict], list[dict]]:
     return teams[:size_a], teams[size_a:]
 
 
+def split_into_four_groups(teams: list[dict]) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
+    """Split teams into four balanced groups (A, B, C, D). Teams must be pre-shuffled."""
+    n = len(teams)
+    # distribute as evenly as possible; first (n % 4) groups get one extra team
+    base, extra = divmod(n, 4)
+    sizes = [base + (1 if i < extra else 0) for i in range(4)]
+    groups = []
+    idx = 0
+    for s in sizes:
+        groups.append(teams[idx:idx + s])
+        idx += s
+    return groups[0], groups[1], groups[2], groups[3]
+
+
 def generate_round_robin(teams: list[dict], group: str) -> list[dict]:
     """Generate all unique pairings (round-robin) for teams in a group."""
     return [
@@ -68,6 +82,30 @@ def generate_direct_ko_bracket(teams: list[dict]) -> list[dict]:
     return [
         {"team_a_id": teams[0]["id"], "team_b_id": teams[1]["id"], "round": MatchRound.semifinal, "group": None, "status": MatchStatus.pending},
         {"team_a_id": teams[2]["id"], "team_b_id": teams[3]["id"], "round": MatchRound.semifinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": None, "team_b_id": None, "round": MatchRound.final, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": None, "team_b_id": None, "round": MatchRound.third_place, "group": None, "status": MatchStatus.pending},
+    ]
+
+
+def generate_quarterfinals(
+    standings_a: list[dict],
+    standings_b: list[dict],
+    standings_c: list[dict],
+    standings_d: list[dict],
+) -> list[dict]:
+    """Generate 4 QF matches from top-2 of each group. Cross-group seeding avoids rematches."""
+    def tid(s): return s.get("team_id") or s["id"]
+    a1, a2 = tid(standings_a[0]), tid(standings_a[1])
+    b1, b2 = tid(standings_b[0]), tid(standings_b[1])
+    c1, c2 = tid(standings_c[0]), tid(standings_c[1])
+    d1, d2 = tid(standings_d[0]), tid(standings_d[1])
+    return [
+        {"team_a_id": a1, "team_b_id": b2, "round": MatchRound.quarterfinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": c1, "team_b_id": d2, "round": MatchRound.quarterfinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": b1, "team_b_id": a2, "round": MatchRound.quarterfinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": d1, "team_b_id": c2, "round": MatchRound.quarterfinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": None, "team_b_id": None, "round": MatchRound.semifinal, "group": None, "status": MatchStatus.pending},
+        {"team_a_id": None, "team_b_id": None, "round": MatchRound.semifinal, "group": None, "status": MatchStatus.pending},
         {"team_a_id": None, "team_b_id": None, "round": MatchRound.final, "group": None, "status": MatchStatus.pending},
         {"team_a_id": None, "team_b_id": None, "round": MatchRound.third_place, "group": None, "status": MatchStatus.pending},
     ]

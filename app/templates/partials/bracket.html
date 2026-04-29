@@ -24,7 +24,7 @@
           data-loser-name="{{ l.name if l else 'Unbekannt' }}"
           data-cups-winner="{{ m.cups_a if m.winner_id == m.team_a_id else m.cups_b }}"
           data-cups-loser="{{ m.cups_b if m.winner_id == m.team_a_id else m.cups_a }}"
-          data-round="{% if m.round.value=='group' %}Gruppe {{ m.group }}{% elif m.round.value=='semifinal' %}Halbfinale{% elif m.round.value=='final' %}Finale{% else %}Platz 3{% endif %}"
+          data-round="{% if m.round.value=='group' %}Gruppe {{ m.group }}{% elif m.round.value=='quarterfinal' %}Viertelfinale{% elif m.round.value=='semifinal' %}Halbfinale{% elif m.round.value=='final' %}Finale{% else %}Platz 3{% endif %}"
           style="display:none;"></span>
       {% endif %}
     {% endfor %}
@@ -55,6 +55,8 @@
               <div style="font-size:1.5rem; color:var(--primary); font-weight:800; letter-spacing:5px; text-transform:uppercase; text-shadow: 0 0 20px rgba(245,158,11,0.4); margin-bottom:0.5rem;">🏆 DAS FINALE 🏆</div>
             {% elif next.round.value == 'semifinal' %}
               <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">HALBFINALE</div>
+            {% elif next.round.value == 'quarterfinal' %}
+              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">VIERTELFINALE</div>
             {% elif next.round.value == 'third_place' %}
               <div style="font-size:0.9rem; color:var(--text-muted); font-weight:700; letter-spacing:3px; text-transform:uppercase;">SPIEL UM PLATZ 3</div>
             {% else %}
@@ -76,7 +78,7 @@
           <strong>{{ team_map[upcoming.team_a_id].emoji }} {{ team_map[upcoming.team_a_id].name }}</strong>
           <span style="color:var(--text-muted);margin:0 0.5rem;">vs</span>
           <strong>{{ team_map[upcoming.team_b_id].emoji }} {{ team_map[upcoming.team_b_id].name }}</strong>
-          <span style="font-size:0.7rem;color:var(--text-muted);margin-left:1rem;">{% if upcoming.round.value=='group' %}Gruppe {{ upcoming.group }}{% elif upcoming.round.value=='semifinal' %}Halbfinale{% else %}Platz 3{% endif %}</span>
+          <span style="font-size:0.7rem;color:var(--text-muted);margin-left:1rem;">{% if upcoming.round.value=='group' %}Gruppe {{ upcoming.group }}{% elif upcoming.round.value=='quarterfinal' %}Viertelfinale{% elif upcoming.round.value=='semifinal' %}Halbfinale{% else %}Platz 3{% endif %}</span>
         </div>
         {% endif %}
         {% else %}
@@ -92,8 +94,10 @@
       <div class="mini-chip">🎯 Jetzt: <strong>{{ team_map[next.team_a_id].emoji }} {{ team_map[next.team_a_id].name }}</strong> vs <strong>{{ team_map[next.team_b_id].emoji }} {{ team_map[next.team_b_id].name }}</strong></div>
       {% endif %}
       <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">Gruppenphase</div>
+      {% set all_group_standings = [('A', standings_a), ('B', standings_b), ('C', standings_c), ('D', standings_d)] %}
+      {% set active_groups = all_group_standings | selectattr('1') | list %}
       <div class="grid-2" style="flex:1;min-height:0;align-items:start; {% if group_phase_done %}opacity:0.6;{% endif %}">
-        {% for group_label, standings in [('A', standings_a), ('B', standings_b)] %}
+        {% for group_label, standings in active_groups %}
         <div>
           <div class="section-title" style="margin-top:0; display:flex; justify-content:space-between; align-items:center;">
             <span>Gruppe {{ group_label }}</span>
@@ -139,11 +143,42 @@
       {% endif %}
       <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">K.O.-Phase</div>
       
+      {% set quarters = ko_matches|selectattr('round.value','eq','quarterfinal')|list %}
       {% set semis = ko_matches|selectattr('round.value','eq','semifinal')|list %}
       {% set final = ko_matches|selectattr('round.value','eq','final')|list|first %}
       {% set third = ko_matches|selectattr('round.value','eq','third_place')|list|first %}
-      
+
       <div class="bracket-container">
+        <!-- Viertelfinals (nur bei 4 Gruppen) -->
+        {% if quarters %}
+        <div class="bracket-col">
+          {% for m in quarters %}
+          <div class="bracket-match glass-panel"
+               style="{% if next and m.id == next.id %}border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-width: 2px;{% endif %}">
+            <div class="meta" style="font-size:0.6rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+              VF {{ loop.index }}
+              {% if next and m.id == next.id %}
+              <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
+              {% endif %}
+            </div>
+            <div class="bracket-team {{ 'winner' if m.winner_id == m.team_a_id else '' }}">
+              {% if m.team_a_id %}<span>{{ team_map[m.team_a_id].emoji }} {{ team_map[m.team_a_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+              <span class="bracket-score">{{ m.cups_a if m.cups_a is not none else '-' }}</span>
+            </div>
+            <div class="bracket-team {{ 'winner' if m.winner_id == m.team_b_id else '' }}" style="border-top:1px solid rgba(255,255,255,0.05);">
+              {% if m.team_b_id %}<span>{{ team_map[m.team_b_id].emoji }} {{ team_map[m.team_b_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+              <span class="bracket-score">{{ m.cups_b if m.cups_b is not none else '-' }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="connector-col">
+          <div class="connector-line top"></div>
+          <div class="connector-line bottom"></div>
+          <div class="connector-to-final"></div>
+        </div>
+        {% endif %}
+
         <!-- Halbfinals -->
         <div class="bracket-col">
           {% for m in semis %}
