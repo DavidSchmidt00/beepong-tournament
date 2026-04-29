@@ -258,7 +258,8 @@
 
   {% endif %}
 
-  {% if standings_a or standings_b %}
+  {% set has_group_matches = all_matches|selectattr('round.value','eq','group')|list|length > 0 %}
+  {% if has_group_matches %}
   <div class="grid-2 mt-6">
     <div>
       <div class="section-title">Gruppe A</div>
@@ -275,7 +276,7 @@
                 {{ s.emoji }} {{ s.name }}
                 {% if s.is_on_fire %}<span class="on-fire" style="font-size: 0.9rem;">🔥</span>{% endif %}
               </div>
-              <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }} & {{ s.player2 }}</div>
+              {% if s.player1 or s.player2 %}<div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }}{% if s.player1 and s.player2 %} &amp; {% endif %}{{ s.player2 }}</div>{% endif %}
             </td>
             <td class="text-success">{{ s.wins }}</td>
             <td class="text-danger">{{ s.losses }}</td>
@@ -301,7 +302,7 @@
                 {{ s.emoji }} {{ s.name }}
                 {% if s.is_on_fire %}<span class="on-fire" style="font-size: 0.9rem;">🔥</span>{% endif %}
               </div>
-              <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }} & {{ s.player2 }}</div>
+              {% if s.player1 or s.player2 %}<div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }}{% if s.player1 and s.player2 %} &amp; {% endif %}{{ s.player2 }}</div>{% endif %}
             </td>
             <td class="text-success">{{ s.wins }}</td>
             <td class="text-danger">{{ s.losses }}</td>
@@ -327,7 +328,7 @@
       <div class="team" style="{{ 'color: var(--success);' if match.winner_id == match.team_a_id else '' }}">
         {% if match.team_a_id %}
           <div>{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ team_map[match.team_a_id].player1 }} & {{ team_map[match.team_a_id].player2 }}</div>
+          {% set ta = team_map[match.team_a_id] %}{% if ta.player1 or ta.player2 %}<div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ ta.player1 }}{% if ta.player1 and ta.player2 %} &amp; {% endif %}{{ ta.player2 }}</div>{% endif %}
         {% else %}
           <span style="color:var(--text-muted);font-weight:normal;">Offen</span>
         {% endif %}
@@ -336,7 +337,7 @@
       <div class="team" style="{{ 'color: var(--success);' if match.winner_id == match.team_b_id else '' }}">
         {% if match.team_b_id %}
           <div>{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ team_map[match.team_b_id].player1 }} & {{ team_map[match.team_b_id].player2 }}</div>
+          {% set tb = team_map[match.team_b_id] %}{% if tb.player1 or tb.player2 %}<div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ tb.player1 }}{% if tb.player1 and tb.player2 %} &amp; {% endif %}{{ tb.player2 }}</div>{% endif %}
         {% else %}
           <span style="color:var(--text-muted);font-weight:normal;">Offen</span>
         {% endif %}

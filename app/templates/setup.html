@@ -8,75 +8,123 @@
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <style>
     body { max-width: 800px; margin: 2rem auto; }
-    @media (max-width: 900px) {
-      body { margin: 0 auto !important; }
+    @media (max-width: 900px) { body { margin: 0 auto !important; } }
+    .delete-btn {
+      background: none; border: none; color: var(--danger);
+      cursor: pointer; font-size: 1.1rem; padding: 0.25rem 0.5rem;
+      opacity: 0.6; flex-shrink: 0; line-height: 1;
     }
-    .admin-pass-section { max-width: 50%; }
-    @media (max-width: 900px) {
-      .admin-pass-section { max-width: 100%; }
-    }
+    .delete-btn:hover { opacity: 1; }
+    #btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <div class="glass-panel">
     <h1>🍺 Turnier Setup</h1>
-    <p style="color: var(--text-muted); margin-bottom: 2rem;">Konfiguriere dein neues Beer Pong Turnier. Wähle die Anzahl der Spieler und lege die Teams fest.</p>
-    
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">
+      Lege den Turniernamen fest, trage alle Teams ein und starte das Turnier.
+    </p>
+
     <form method="post" action="/setup" id="setup-form">
+      <input type="hidden" name="num_teams" id="num-teams-count" value="0">
+
       <div class="grid-2 mb-4">
         <div class="section">
           <label>Turniername</label>
           <input type="text" name="title" value="Beer Pong Turnier" required>
         </div>
         <div class="section">
-          <label>Anzahl Spieler</label>
-          <select name="num_players" id="num-players" onchange="updateTeamFields()">
-            {% for n in num_players_options %}
-            <option value="{{ n }}" {% if n == 12 %}selected{% endif %}>{{ n }} Spieler ({{ n // 2 }} Teams)</option>
-            {% endfor %}
-          </select>
+          <label>Admin-Passwort</label>
+          <input type="password" name="admin_password" required minlength="4"
+                 placeholder="Wird für den Login benötigt">
         </div>
       </div>
-      
-      <div class="section mb-4 admin-pass-section">
-        <label>Admin-Passwort</label>
-        <input type="password" name="admin_password" required minlength="4" placeholder="Wird für den Login benötigt">
-      </div>
-      
+
       <div class="section mt-6">
-        <h3 class="section-title">Team-Konfiguration</h3>
+        <h3 class="section-title">Teams</h3>
         <div id="team-fields" class="setup-grid"></div>
       </div>
-      
-      <button type="submit" class="btn btn-success w-full mt-4" style="padding: 1rem; font-size: 1.1rem;">
+
+      <button type="button" class="btn btn-secondary w-full mt-4"
+              onclick="addTeam()" style="padding: 0.85rem; font-size: 1rem;">
+        + Team hinzufügen
+      </button>
+
+      <button type="submit" id="btn-start" disabled
+              class="btn btn-success w-full mt-4"
+              style="padding: 1rem; font-size: 1.1rem;">
         Turnier starten 🚀
       </button>
+      <p id="min-hint" style="text-align:center; font-size:0.75rem;
+                               color:var(--text-muted); margin-top:0.5rem;">
+        Mindestens 4 Teams erforderlich
+      </p>
     </form>
   </div>
 
   <script>
-    function updateTeamFields(){
-      const n=parseInt(document.getElementById('num-players').value);
-      const container=document.getElementById('team-fields');
-      container.innerHTML='';
-      for(let i=1;i<=n/2;i++){
-        container.innerHTML+=`
-        <div class="team-setup-card">
-          <label style="color: var(--primary);">Team ${i}</label>
-          <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
-            <div style="display:flex; gap:0.5rem;">
-              <input type="text" name="emoji_${i}" value="🍺" maxlength="2" style="width: 60px; text-align: center; font-size: 1.2rem;" title="Wähle ein Emoji">
-              <input type="text" name="team_name_${i}" placeholder="Teamname" required style="flex: 1;">
-            </div>
-            <div class="flex-mobile-stack" style="display:flex; gap:0.5rem;">
-              <input type="text" name="player1_${i}" placeholder="Spieler 1" required>
-              <input type="text" name="player2_${i}" placeholder="Spieler 2" required>
-            </div>
+    let teamCounter = 0;
+
+    function addTeam() {
+      teamCounter++;
+      const idx = teamCounter;
+      const container = document.getElementById('team-fields');
+      const card = document.createElement('div');
+      card.className = 'team-setup-card';
+      card.id = `team-card-${idx}`;
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="color: var(--primary);" id="team-label-${idx}">Team</label>
+          <button type="button" class="delete-btn" onclick="removeTeam(${idx})" title="Team entfernen">✕</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+          <div style="display:flex; gap:0.5rem;">
+            <input type="text" name="emoji_${idx}" value="🍺" maxlength="2"
+                   style="width:60px; text-align:center; font-size:1.2rem;" title="Emoji">
+            <input type="text" name="team_name_${idx}" placeholder="Teamname" required
+                   style="flex:1;" oninput="updateStartButton()">
+          </div>
+          <div class="flex-mobile-stack" style="display:flex; gap:0.5rem;">
+            <input type="text" name="player1_${idx}" placeholder="Spieler 1 (optional)">
+            <input type="text" name="player2_${idx}" placeholder="Spieler 2 (optional)">
           </div>
         </div>`;
-      }
+      container.appendChild(card);
+      updateIndices();
+      updateStartButton();
+      card.querySelector(`[name="team_name_${idx}"]`).focus();
     }
-    updateTeamFields();
+
+    function removeTeam(idx) {
+      const card = document.getElementById(`team-card-${idx}`);
+      if (card) card.remove();
+      updateIndices();
+      updateStartButton();
+    }
+
+    function updateIndices() {
+      const cards = document.querySelectorAll('.team-setup-card');
+      cards.forEach((card, i) => {
+        const label = card.querySelector('[id^="team-label-"]');
+        if (label) label.textContent = `Team ${i + 1}`;
+      });
+      document.getElementById('num-teams-count').value = cards.length;
+    }
+
+    function updateStartButton() {
+      const cards = document.querySelectorAll('.team-setup-card');
+      const filled = [...cards].filter(card => {
+        const inp = card.querySelector('input[name^="team_name_"]');
+        return inp && inp.value.trim().length > 0;
+      }).length;
+      const btn = document.getElementById('btn-start');
+      const hint = document.getElementById('min-hint');
+      btn.disabled = filled < 4;
+      hint.style.display = filled < 4 ? 'block' : 'none';
+    }
+
+    // Start with one empty card
+    addTeam();
   </script>
 </body>
 </html>

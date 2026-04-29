@@ -74,12 +74,11 @@ def test_setup_get_accessible_without_auth(client, db):
     assert "Turnier" in response.text
 
 
-def test_setup_post_12_players_creates_6_group_matches(client, db):
-    data = {"title": "T", "num_players": "12", "admin_password": "pw"}
+def test_setup_post_6_teams_creates_6_group_matches(client, db):
+    data = {"title": "T", "num_teams": "6", "admin_password": "pw"}
     for i in range(1, 7):
         data[f"team_name_{i}"] = f"Team{i}"
-        data[f"player1_{i}"] = f"P{i}a"
-        data[f"player2_{i}"] = f"P{i}b"
+        # player names intentionally omitted — now optional
     response = client.post("/setup", data=data, follow_redirects=False)
     assert response.status_code == 302
     tournament = db.query(Tournament).first()
@@ -90,13 +89,22 @@ def test_setup_post_12_players_creates_6_group_matches(client, db):
 
 
 def test_setup_redirects_to_admin(client, db):
-    data = {"title": "T", "num_players": "4", "admin_password": "pw"}
-    for i in range(1, 3):
+    data = {"title": "T", "num_teams": "4", "admin_password": "pw"}
+    for i in range(1, 5):
         data[f"team_name_{i}"] = f"Team{i}"
-        data[f"player1_{i}"] = f"P{i}a"
-        data[f"player2_{i}"] = f"P{i}b"
     response = client.post("/setup", data=data, follow_redirects=False)
     assert response.headers["location"] == "/admin"
+
+
+def test_setup_team_without_player_names(client, db):
+    data = {"title": "T", "num_teams": "4", "admin_password": "pw"}
+    for i in range(1, 5):
+        data[f"team_name_{i}"] = f"Team{i}"
+    response = client.post("/setup", data=data, follow_redirects=False)
+    assert response.status_code == 302
+    team = db.query(Team).first()
+    assert team.player1 is None
+    assert team.player2 is None
 
 
 # Admin tests

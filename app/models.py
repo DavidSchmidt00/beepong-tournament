@@ -47,8 +47,8 @@ class Team(Base):
     tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"))
     name: Mapped[str] = mapped_column(String(50))
     emoji: Mapped[str] = mapped_column(String(10), default="🍺")
-    player1: Mapped[str] = mapped_column(String(50))
-    player2: Mapped[str] = mapped_column(String(50))
+    player1: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    player2: Mapped[str | None] = mapped_column(String(50), nullable=True)
     group: Mapped[str] = mapped_column(String(1))  # "A" or "B"
 
     tournament: Mapped["Tournament"] = relationship(back_populates="teams")

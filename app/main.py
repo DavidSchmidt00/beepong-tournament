@@ -82,34 +82,36 @@ def get_setup(request: Request, db: Session = Depends(get_db)):
     existing = db.query(Tournament).first()
     if existing and existing.status != TournamentStatus.setup:
         return RedirectResponse(url="/admin")
-    return templates.TemplateResponse(request, "setup.html", {"num_players_options": [8, 10, 12, 14, 16]})
+    return templates.TemplateResponse(request, "setup.html", {})
 
 
 @app.post("/setup")
 async def post_setup(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     title = form.get("title", "Beer Pong Turnier")
-    num_players = int(form.get("num_players", 12))
     admin_password = form.get("admin_password", "")
-    num_teams = num_players // 2
-    initial_status = TournamentStatus.knockout if num_teams <= 4 else TournamentStatus.group_stage
+    num_teams_raw = int(form.get("num_teams", 0))
 
-    teams_input = [
-        {
-            "name": form.get(f"team_name_{i}", f"Team {i}"),
-            "emoji": form.get(f"emoji_{i}", "🍺"),
-            "player1": form.get(f"player1_{i}", ""),
-            "player2": form.get(f"player2_{i}", ""),
-        }
-        for i in range(1, num_teams + 1)
-    ]
+    teams_input = []
+    for i in range(1, num_teams_raw + 1):
+        name = (form.get(f"team_name_{i}") or "").strip()
+        if not name:
+            continue
+        teams_input.append({
+            "name": name,
+            "emoji": form.get(f"emoji_{i}") or "🍺",
+            "player1": (form.get(f"player1_{i}") or "").strip() or None,
+            "player2": (form.get(f"player2_{i}") or "").strip() or None,
+        })
+    num_teams = len(teams_input)
+    initial_status = TournamentStatus.knockout if num_teams <= 4 else TournamentStatus.group_stage
     random.shuffle(teams_input)
 
     tournament = Tournament(
         title=title,
         status=initial_status,
         admin_password_hash=hash_password(admin_password),
-        num_players=num_players,
+        num_players=num_teams * 2,
     )
     db.add(tournament)
     db.flush()
@@ -152,6 +154,13 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
 
 
 # ── Bracket context helper ────────────────────────────────────────────────────
+
+def _players_label(team) -> str:
+    if not team:
+        return ""
+    parts = [p for p in (team.player1, team.player2) if p]
+    return " & ".join(parts)
+
 
 def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
     teams = tournament.teams
@@ -221,12 +230,12 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
         r = team_map.get(r_id)
         overall_ranking.append({
             "rank": 1, "team_id": w_id, "team_name": w.name if w else "Team",
-            "team_emoji": w.emoji if w else "🏆", "team_players": f"{w.player1} & {w.player2}" if w else "",
+            "team_emoji": w.emoji if w else "🏆", "team_players": _players_label(w),
             "status": "🏆 SIEGER"
         })
         overall_ranking.append({
             "rank": 2, "team_id": r_id, "team_name": r.name if r else "Team",
-            "team_emoji": r.emoji if r else "🥈", "team_players": f"{r.player1} & {r.player2}" if r else "",
+            "team_emoji": r.emoji if r else "🥈", "team_players": _players_label(r),
             "status": "🥈 2. PLATZ"
         })
     
@@ -238,12 +247,12 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
         t4 = team_map.get(t4_id)
         overall_ranking.append({
             "rank": 3, "team_id": t3_id, "team_name": t3.name if t3 else "Team",
-            "team_emoji": t3.emoji if t3 else "🥉", "team_players": f"{t3.player1} & {t3.player2}" if t3 else "",
+            "team_emoji": t3.emoji if t3 else "🥉", "team_players": _players_label(t3),
             "status": "🥉 3. PLATZ"
         })
         overall_ranking.append({
             "rank": 4, "team_id": t4_id, "team_name": t4.name if t4 else "Team",
-            "team_emoji": t4.emoji if t4 else "🍺", "team_players": f"{t4.player1} & {t4.player2}" if t4 else "",
+            "team_emoji": t4.emoji if t4 else "🍺", "team_players": _players_label(t4),
             "status": "4. PLATZ"
         })
 
@@ -261,7 +270,7 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
                 "team_id": tid,
                 "team_name": t.name if t else "Team",
                 "team_emoji": t.emoji if t else "🍺",
-                "team_players": f"{t.player1} & {t.player2}" if t else "",
+                "team_players": _players_label(t),
                 "status": f"{s['wins']}S / {s['losses']}N"
             })
 
