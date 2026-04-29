@@ -44,7 +44,7 @@ def root(db: Session = Depends(get_db)):
 
 @app.get("/login", response_class=HTMLResponse)
 def get_login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", {"error": None})
 
 
 @app.post("/login")
@@ -54,11 +54,7 @@ def post_login(request: Request, password: str = Form(...), db: Session = Depend
         response = RedirectResponse(url="/admin", status_code=302)
         response.set_cookie(SESSION_COOKIE, create_session_value(password), httponly=True, samesite="lax")
         return response
-    return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "Falsches Passwort"},
-        status_code=401,
-    )
+    return templates.TemplateResponse(request, "login.html", {"error": "Falsches Passwort"}, status_code=401)
 
 
 @app.post("/logout")
@@ -75,10 +71,7 @@ def get_setup(request: Request, db: Session = Depends(get_db)):
     existing = db.query(Tournament).first()
     if existing and existing.status != TournamentStatus.setup:
         return RedirectResponse(url="/admin")
-    return templates.TemplateResponse(
-        "setup.html",
-        {"request": request, "num_players_options": [8, 10, 12, 14, 16]},
-    )
+    return templates.TemplateResponse(request, "setup.html", {"num_players_options": [8, 10, 12, 14, 16]})
 
 
 @app.post("/setup")
@@ -200,8 +193,7 @@ def get_admin(request: Request, db: Session = Depends(get_db), _=Depends(require
     if not tournament:
         return RedirectResponse(url="/setup")
     ctx = _build_bracket_context(tournament, db)
-    ctx["request"] = request
-    return templates.TemplateResponse("admin.html", ctx)
+    return templates.TemplateResponse(request, "admin.html", ctx)
 
 
 @app.post("/matches/{match_id}/result")
@@ -292,8 +284,7 @@ def get_tv(request: Request, db: Session = Depends(get_db)):
     if not tournament:
         return RedirectResponse(url="/setup")
     ctx = _build_bracket_context(tournament, db)
-    ctx["request"] = request
-    return templates.TemplateResponse("tv.html", ctx)
+    return templates.TemplateResponse(request, "tv.html", ctx)
 
 
 @app.get("/partials/bracket", response_class=HTMLResponse)
@@ -302,5 +293,4 @@ def get_bracket_partial(request: Request, db: Session = Depends(get_db)):
     if not tournament:
         return HTMLResponse("<p>Kein Turnier aktiv</p>")
     ctx = _build_bracket_context(tournament, db)
-    ctx["request"] = request
-    return templates.TemplateResponse("partials/bracket.html", ctx)
+    return templates.TemplateResponse(request, "partials/bracket.html", ctx)
