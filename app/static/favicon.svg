@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="12" fill="#1a1a2e"/>
+
+  <!-- Red Solo Cup (trapezoid shape) -->
+  <!-- Cup body -->
+  <path d="M18 18 L22 50 L42 50 L46 18 Z" fill="#e63946" rx="2"/>
+  <!-- Cup rim highlight -->
+  <rect x="17" y="16" width="30" height="5" rx="2" fill="#ff6b6b"/>
+  <!-- Cup horizontal lines for texture -->
+  <line x1="20" y1="27" x2="44" y2="27" stroke="#c1121f" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="21" y1="35" x2="43" y2="35" stroke="#c1121f" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="43" x2="42" y2="43" stroke="#c1121f" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Ping pong ball -->
+  <circle cx="46" cy="14" r="8" fill="#f4f4f4" stroke="#e0e0e0" stroke-width="0.5"/>
+  <!-- Ball curve lines -->
+  <path d="M39.5 11 Q46 14 52.5 11" fill="none" stroke="#ccc" stroke-width="0.8"/>
+  <path d="M39.5 17 Q46 14 52.5 17" fill="none" stroke="#ccc" stroke-width="0.8"/>
+</svg>
