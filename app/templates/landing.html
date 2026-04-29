@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beer Pong Turnier</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=2">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    .landing-container {
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    .hero {
+      margin-bottom: 3rem;
+    }
+
+    .hero-title {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      justify-content: center;
+    }
+
+    .hero-subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .nav-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 480px) {
+      .nav-cards {
+        grid-template-columns: 1fr;
+      }
+      .hero-title {
+        font-size: 2.2rem;
+      }
+    }
+
+    .nav-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2rem 1.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      text-decoration: none;
+      color: var(--text-main);
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .nav-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 8px 25px var(--primary-glow);
+      transform: translateY(-3px);
+    }
+
+    .nav-card-icon {
+      font-size: 2.5rem;
+      line-height: 1;
+    }
+
+    .nav-card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .nav-card-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .nav-card.primary-card {
+      border-color: rgba(245, 158, 11, 0.3);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(19, 27, 47, 0.7));
+    }
+
+    .nav-card.primary-card:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(19, 27, 47, 0.9));
+    }
+
+    .status-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    {% if tournament %}
+    .tournament-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 1rem;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    {% endif %}
+  </style>
+</head>
+<body>
+  <div class="landing-container">
+    <div class="hero">
+      <h1 class="hero-title">🍺 Beer Pong</h1>
+      <p class="hero-subtitle">Turnierverwaltung &amp; Live-Anzeige</p>
+    </div>
+
+    {% if tournament %}
+    <div>
+      <span class="tournament-badge">
+        🏆 {{ tournament.title }}
+      </span>
+    </div>
+    {% endif %}
+
+    <div class="nav-cards">
+      <a href="{{ admin_url }}" class="nav-card primary-card">
+        <span class="nav-card-icon">⚙️</span>
+        <span class="nav-card-title">Admin</span>
+        <p class="nav-card-desc">Turnier einrichten, Spiele eintragen und den Ablauf steuern</p>
+      </a>
+
+      <a href="/tv" class="nav-card">
+        <span class="nav-card-icon">📺</span>
+        <span class="nav-card-title">TV-Ansicht</span>
+        <p class="nav-card-desc">Live-Anzeige für den Beamer oder Fernseher mit automatischer Aktualisierung</p>
+      </a>
+    </div>
+
+    <p class="status-hint">
+      {% if not tournament %}
+        Noch kein Turnier angelegt – starte mit der Admin-Ansicht.
+      {% elif tournament.status.value == 'setup' %}
+        Turnier wird eingerichtet.
+      {% elif tournament.status.value == 'finished' %}
+        Turnier beendet.
+      {% else %}
+        Turnier läuft.
+      {% endif %}
+    </p>
+  </div>
+</body>
+</html>

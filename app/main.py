@@ -32,14 +32,19 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 
-# ── Root redirect ─────────────────────────────────────────────────────────────
+# ── Root / Landing Page ───────────────────────────────────────────────────────
 
-@app.get("/")
-def root(db: Session = Depends(get_db)):
+@app.get("/", response_class=HTMLResponse)
+def root(request: Request, db: Session = Depends(get_db)):
     tournament = db.query(Tournament).first()
     if not tournament or tournament.status == TournamentStatus.setup:
-        return RedirectResponse(url="/setup")
-    return RedirectResponse(url="/admin")
+        admin_url = "/setup"
+    else:
+        admin_url = "/admin"
+    return templates.TemplateResponse(request, "landing.html", {
+        "tournament": tournament,
+        "admin_url": admin_url,
+    })
 
 
 # ── Auth routes ───────────────────────────────────────────────────────────────
