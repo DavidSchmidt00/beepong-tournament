@@ -94,10 +94,8 @@
       <div class="mini-chip">🎯 Jetzt: <strong>{{ team_map[next.team_a_id].emoji }} {{ team_map[next.team_a_id].name }}</strong> vs <strong>{{ team_map[next.team_b_id].emoji }} {{ team_map[next.team_b_id].name }}</strong></div>
       {% endif %}
       <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">Gruppenphase</div>
-      {% set all_group_standings = [('A', standings_a), ('B', standings_b), ('C', standings_c), ('D', standings_d)] %}
-      {% set active_groups = all_group_standings | selectattr('1') | list %}
       <div class="grid-2" style="flex:1;min-height:0;align-items:start; {% if group_phase_done %}opacity:0.6;{% endif %}">
-        {% for group_label, standings in active_groups %}
+        {% for group_label, standings in active_group_standings %}
         <div>
           <div class="section-title" style="margin-top:0; display:flex; justify-content:space-between; align-items:center;">
             <span>Gruppe {{ group_label }}</span>

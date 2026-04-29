@@ -287,6 +287,11 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
                 "status": f"{s['wins']}S / {s['losses']}N"
             })
 
+    active_group_standings = [
+        (label, standings_by_group[label])
+        for label in group_labels
+    ]
+
     return {
         "tournament": tournament,
         "current_match_id": tournament.current_match_id,
@@ -296,6 +301,7 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
         "standings_c": standings_c,
         "standings_d": standings_d,
         "group_labels": group_labels,
+        "active_group_standings": active_group_standings,
         "pending_matches": pending_matches,
         "completed_count": completed_count,
         "total_count": len(matches),
@@ -346,7 +352,7 @@ def post_result(
     group_matches = [m for m in tournament.matches if m.round == MatchRound.group]
 
     if all(m.status == MatchStatus.completed for m in group_matches):
-        ko_existing = [m for m in tournament.matches if m.round == MatchRound.semifinal]
+        ko_existing = [m for m in tournament.matches if m.round in (MatchRound.semifinal, MatchRound.quarterfinal)]
         if not ko_existing:
             _generate_ko_matches(tournament, db)
             tournament.status = TournamentStatus.knockout
@@ -354,17 +360,17 @@ def post_result(
     db.expire(tournament, ["matches"])
 
     # QF → SF: fill semifinal slots once all quarterfinals are done
-    qf_matches = [m for m in tournament.matches if m.round == MatchRound.quarterfinal]
+    qf_matches = sorted([m for m in tournament.matches if m.round == MatchRound.quarterfinal], key=lambda m: m.id)
     if qf_matches and all(m.status == MatchStatus.completed for m in qf_matches):
-        semis = [m for m in tournament.matches if m.round == MatchRound.semifinal]
+        semis = sorted([m for m in tournament.matches if m.round == MatchRound.semifinal], key=lambda m: m.id)
         if semis and semis[0].team_a_id is None:
-            # QF order: QF1/QF2 winners → SF1, QF3/QF4 winners → SF2
+            # QF1/QF2 winners → SF1, QF3/QF4 winners → SF2
             semis[0].team_a_id = qf_matches[0].winner_id
             semis[0].team_b_id = qf_matches[1].winner_id
             semis[1].team_a_id = qf_matches[2].winner_id
             semis[1].team_b_id = qf_matches[3].winner_id
 
-    semis = [m for m in tournament.matches if m.round == MatchRound.semifinal]
+    semis = sorted([m for m in tournament.matches if m.round == MatchRound.semifinal], key=lambda m: m.id)
     if semis and all(m.status == MatchStatus.completed for m in semis):
         final = next((m for m in tournament.matches if m.round == MatchRound.final), None)
         third = next((m for m in tournament.matches if m.round == MatchRound.third_place), None)

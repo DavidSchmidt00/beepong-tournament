@@ -260,10 +260,8 @@
 
   {% set has_group_matches = all_matches|selectattr('round.value','eq','group')|list|length > 0 %}
   {% if has_group_matches %}
-  {% set all_group_standings = [('A', standings_a), ('B', standings_b), ('C', standings_c), ('D', standings_d)] %}
-  {% set active_groups = all_group_standings | selectattr('1') | list %}
   <div class="grid-2 mt-6">
-    {% for group_label, standings in active_groups %}
+    {% for group_label, standings in active_group_standings %}
     <div>
       <div class="section-title">Gruppe {{ group_label }}</div>
       <div class="table-wrapper">
