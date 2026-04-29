@@ -4,21 +4,303 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ tournament.title }} – Live</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=2">
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    *{box-sizing:border-box}
-    body{font-family:system-ui,sans-serif;background:#0f172a;color:#f1f5f9;margin:0;padding:1.5rem 2rem;min-height:100vh}
-    h1{color:#f59e0b;font-size:1.8rem;margin:0 0 .25rem}
-    .subtitle{color:#64748b;font-size:.9rem;margin-bottom:1.5rem}
-    .live-dot{display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;margin-right:6px;animation:pulse 1.5s infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body {
+      display: flex; flex-direction: column;
+      padding: 0.75rem 1.5rem 0.5rem;
+      box-sizing: border-box; gap: 0.5rem;
+    }
+    .tv-header {
+      display: flex; justify-content: space-between;
+      align-items: center; flex-shrink: 0;
+    }
+    .tv-header h1 { margin: 0; font-size: 1.3rem; }
+
+    #live-bracket {
+      flex: 1; min-height: 0;
+      position: relative; overflow: hidden;
+    }
+    .tv-slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      opacity: 0; transition: opacity 0.5s ease;
+      pointer-events: none; overflow: hidden;
+      padding: 0.5rem 0;
+    }
+    
+    /* State-based visibility using parent classes to avoid HTMX flickering */
+    #live-bracket.active-0 .tv-slide:nth-of-type(1) { opacity: 1; pointer-events: auto; }
+    #live-bracket.active-1 .tv-slide:nth-of-type(2) { opacity: 1; pointer-events: auto; }
+    #live-bracket.active-2 .tv-slide:nth-of-type(3) { opacity: 1; pointer-events: auto; }
+    #live-bracket.active-3 .tv-slide:nth-of-type(4) { opacity: 1; pointer-events: auto; }
+    #live-bracket.active-4 .tv-slide:nth-of-type(5) { opacity: 1; pointer-events: auto; }
+    #live-bracket.active-5 .tv-slide:nth-of-type(6) { opacity: 1; pointer-events: auto; }
+
+    /* Slide nav dots */
+    #slide-nav {
+      display: flex; justify-content: center;
+      align-items: center; gap: 0.75rem; flex-shrink: 0; padding: 0.3rem;
+      margin-bottom: 0.2rem;
+    }
+    .slide-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: background 0.3s, transform 0.3s;
+      cursor: pointer;
+    }
+    .slide-dot.active { background: var(--primary); transform: scale(1.2); }
+
+    .progress-bar-container {
+      width: 120px; height: 3px; background: rgba(255,255,255,0.1);
+      border-radius: 99px; overflow: hidden; align-self: center;
+      margin-bottom: 0.5rem;
+    }
+    #progress-bar-fill {
+      height: 100%; width: 0%; background: var(--primary);
+      transition: width 0.1s linear;
+    }
+
+    /* Compact table overrides */
+    .standings td, .standings th { padding: 0.75rem 0.5rem; font-size: 0.9rem; }
+    .section-title { margin: 0.5rem 0; font-size: 0.8rem; }
+    .bracket-match { padding: 0.75rem 1rem; position: relative; z-index: 2; min-width: 200px; }
+    .bracket-team { padding: 0.4rem 0; font-size: 1.1rem; }
+    .bracket-score { font-size: 1.2rem; min-width: 25px; }
+    
+    /* Bracket Connectors */
+    .bracket-container {
+      display: flex; align-items: center; justify-content: center; gap: 0;
+      flex: 1; width: 100%; transform: scale(1.1); /* Slightly scale up the whole tree */
+    }
+    .bracket-col { display: flex; flex-direction: column; gap: 4rem; position: relative; }
+    .connector-col { width: 60px; position: relative; align-self: stretch; }
+    
+    .connector-line {
+      position: absolute; border: 1px solid rgba(255,255,255,0.15);
+      border-left: none; width: 50%; height: 50%;
+    }
+    .connector-line.top { top: 25%; border-bottom: none; border-top-right-radius: 8px; }
+    .connector-line.bottom { bottom: 25%; border-top: none; border-bottom-right-radius: 8px; }
+    .connector-to-final {
+      position: absolute; top: 50%; right: 0; width: 50%;
+      border-top: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .mini-chip {
+      flex-shrink: 0; text-align: center;
+      padding: 0.4rem 1rem; margin-bottom: 0.5rem;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 999px; font-size: 0.8rem;
+      color: var(--text-muted); align-self: center;
+    }
+    .mini-chip strong { color: var(--primary); }
+
+    /* Winner overlay */
+    #winner-overlay {
+      display: none; position: fixed; inset: 0; z-index: 999;
+      background: rgba(0,0,0,0.9); backdrop-filter: blur(12px);
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+    }
+    .tv-background {
+      position: fixed; top: 55%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 35rem; opacity: 0.03; z-index: -1; pointer-events: none;
+      filter: blur(2px);
+    }
+    @keyframes pulse {
+      0% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+      100% { opacity: 0.5; transform: scale(1); }
+    }
+    @keyframes overlayIn {
+      from { opacity:0; transform:scale(0.92); }
+      to   { opacity:1; transform:scale(1); }
+    }
+    @keyframes winnerPop {
+      0%  { transform:scale(0.5); opacity:0; }
+      70% { transform:scale(1.08); }
+      100%{ transform:scale(1);   opacity:1; }
+    }
+    #overlay-winner {
+      animation: winnerPop 0.6s 0.2s cubic-bezier(0.175,0.885,0.32,1.275) both;
+    }
   </style>
 </head>
 <body>
-  <h1>🍺 {{ tournament.title }}</h1>
-  <p class="subtitle"><span class="live-dot"></span>Live — aktualisiert automatisch alle 10 Sekunden</p>
-  <div hx-get="/partials/bracket" hx-trigger="every 10s" hx-swap="innerHTML" id="live-bracket">
+  <div class="tv-background">🍺</div>
+
+  <div class="tv-header">
+    <h1 id="tv-tournament-title">🍺 {{ tournament.title if tournament else 'Beer Pong Turnier' }}</h1>
+    <div class="live-indicator" style="margin: 0;">
+      <span class="live-dot"></span> Live
+    </div>
+  </div>
+
+  <div hx-get="/partials/bracket" hx-trigger="every 3s" hx-swap="innerHTML" id="live-bracket" class="active-0">
     {% include "partials/bracket.html" %}
   </div>
+
+  <div id="slide-nav"></div>
+  <div class="progress-bar-container">
+    <div id="progress-bar-fill"></div>
+  </div>
+
+  <!-- Winner Overlay -->
+  <div id="winner-overlay">
+    <div id="overlay-round" style="font-size:0.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:3px;margin-bottom:1.5rem;"></div>
+    <div style="font-size:0.9rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:0.5rem;">🏆 WINNER</div>
+    <div id="overlay-winner" style="font-size:4.5rem;font-weight:700;color:var(--primary);text-shadow:0 0 40px var(--primary-glow);line-height:1.1;margin-bottom:1rem;"></div>
+    <div id="overlay-score" style="font-size:1.4rem;font-weight:600;color:var(--text-muted);margin-bottom:0.4rem;"></div>
+    <div id="overlay-loser" style="font-size:1.1rem;color:rgba(255,255,255,0.3);"></div>
+  </div>
+
+  <script>
+    // ── Slideshow ──────────────────────────────────────────────
+    let currentSlide = 0;
+    let progress = 0;
+    const SLIDE_DURATION = 12000; // 12 seconds
+    const TICK_INTERVAL = 100;
+    const bracketEl = document.getElementById('live-bracket');
+
+    function updateSlideshowUI() {
+      const numSlides = document.querySelectorAll('.tv-slide').length;
+      if (numSlides === 0) return;
+      if (currentSlide >= numSlides) currentSlide = 0;
+      bracketEl.className = 'active-' + currentSlide;
+      buildDots(numSlides);
+    }
+
+    function buildDots(num) {
+      const nav = document.getElementById('slide-nav');
+      nav.innerHTML = '';
+      for (let i = 0; i < num; i++) {
+        const d = document.createElement('div');
+        d.className = 'slide-dot' + (i === currentSlide ? ' active' : '');
+        d.onclick = () => { currentSlide = i; progress = 0; updateSlideshowUI(); };
+        nav.appendChild(d);
+      }
+    }
+
+    // Main ticker for progress and slide switching
+    setInterval(() => {
+      const numSlides = document.querySelectorAll('.tv-slide').length;
+      const progCont = document.querySelector('.progress-bar-container');
+      if (numSlides <= 1) {
+        if (progCont) progCont.style.display = 'none';
+        return;
+      }
+      if (progCont) progCont.style.display = 'block';
+
+      progress += TICK_INTERVAL;
+      
+      const bar = document.getElementById('progress-bar-fill');
+      if (bar) {
+        const pct = (progress / SLIDE_DURATION) * 100;
+        bar.style.width = Math.min(pct, 100) + '%';
+      }
+
+      if (progress >= SLIDE_DURATION) {
+        progress = 0;
+        currentSlide = (currentSlide + 1) % numSlides;
+        updateSlideshowUI();
+      }
+    }, TICK_INTERVAL);
+
+    updateSlideshowUI();
+
+    bracketEl.addEventListener('htmx:afterSwap', () => {
+      checkNewMatches();
+      updateSlideshowUI();
+    });
+
+    // ── Winner detection & overlay ─────────────────────────────
+    let knownCompletedIds = new Set();
+    let groupPhaseWasDone = false;
+
+    function syncCompleted() {
+        document.querySelectorAll('[data-match-completed]').forEach(el => knownCompletedIds.add(el.getAttribute('data-match-completed')));
+        groupPhaseWasDone = !!document.getElementById('group-phase-done-marker');
+    }
+    syncCompleted();
+
+    function checkNewMatches() {
+      // Check group phase first
+      const groupDoneMarker = document.getElementById('group-phase-done-marker');
+      if (groupDoneMarker && !groupPhaseWasDone) {
+        showGlobalMessage("GRUPPENPHASE BEENDET", "Die K.O.-Runde steht fest!", "#10b981");
+        groupPhaseWasDone = true;
+      }
+
+      const newIds = new Set();
+      const newEls = {};
+      document.querySelectorAll('[data-match-completed]').forEach(el => {
+        const id = el.getAttribute('data-match-completed');
+        newIds.add(id);
+        if (!newEls[id]) newEls[id] = el;
+      });
+      const fresh = [...newIds].filter(id => !knownCompletedIds.has(id));
+      if (fresh.length > 0) showWinnerOverlay(newEls[fresh[0]]);
+      knownCompletedIds = newIds;
+    }
+
+    function showGlobalMessage(title, sub, color) {
+      const overlay = document.getElementById('winner-overlay');
+      document.getElementById('overlay-round').textContent = "EVENT";
+      document.getElementById('overlay-winner').textContent = title;
+      document.getElementById('overlay-winner').style.color = color;
+      document.getElementById('overlay-score').textContent = sub;
+      document.getElementById('overlay-loser').textContent = "";
+      
+      overlay.style.display = 'flex';
+      confetti({particleCount: 150, spread: 100, origin: { y: 0.6 }, zIndex: 1000});
+      
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => { 
+          overlay.style.display='none'; overlay.style.opacity='1'; overlay.style.transition=''; 
+          document.getElementById('overlay-winner').style.color = 'var(--primary)';
+        }, 500);
+      }, 4000);
+    }
+
+    function showWinnerOverlay(el) {
+      const overlay = document.getElementById('winner-overlay');
+      const round = el.getAttribute('data-round') || 'Spiel';
+      const wEmoji = el.getAttribute('data-winner-emoji') || '🏆';
+      const wName = el.getAttribute('data-winner-name') || 'Team';
+      const lEmoji = el.getAttribute('data-loser-emoji') || '';
+      const lName = el.getAttribute('data-loser-name') || 'Gegner';
+      const cWin = el.getAttribute('data-cups-winner') || '0';
+      const cLos = el.getAttribute('data-cups-loser') || '0';
+
+      const isFinal = round === 'Finale';
+      document.getElementById('overlay-round').textContent = round;
+      document.getElementById('overlay-winner').textContent = wEmoji + ' ' + wName;
+      document.getElementById('overlay-score').textContent = cWin + ' : ' + cLos + ' Becher';
+      document.getElementById('overlay-loser').textContent = 'gegen ' + lEmoji + ' ' + lName;
+      overlay.style.animation = 'overlayIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)';
+      overlay.style.display = 'flex';
+
+      const z = 1000;
+      confetti({particleCount: isFinal?200:80, spread:120, origin:{y:0.6}, zIndex:z, colors:['#f59e0b','#10b981','#fff','#3b82f6']});
+      if (isFinal) {
+        setTimeout(() => confetti({particleCount:100,angle:60,spread:80,origin:{x:0,y:0.5},zIndex:z,colors:['#f59e0b','#fff']}), 300);
+        setTimeout(() => confetti({particleCount:100,angle:120,spread:80,origin:{x:1,y:0.5},zIndex:z,colors:['#10b981','#fff']}), 500);
+      }
+
+      const dur = isFinal ? 5000 : 3500;
+      setTimeout(() => {
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.style.display='none'; overlay.style.opacity='1'; overlay.style.transition=''; }, 500);
+      }, dur);
+    }
+  </script>
 </body>
 </html>

@@ -1,59 +1,257 @@
 <div id="bracket-content">
-  {% if tournament.status.value == 'finished' %}
-    {% set final_match = ko_matches|selectattr('round.value','eq','final')|list|first %}
-    {% if final_match and final_match.winner_id %}
-    <div style="text-align:center;padding:2rem;background:#16a34a;border-radius:12px;margin-bottom:1.5rem">
-      <div style="font-size:2rem">🏆</div>
-      <div style="font-size:1.5rem;font-weight:700">{{ team_map[final_match.winner_id].name }}</div>
-      <div style="opacity:.8">Turniersieger!</div>
+  {% if tournament %}
+    {% if request.headers.get('HX-Request') %}
+    {% if request.headers.get('HX-Request') %}
+    <h1 id="tv-tournament-title" hx-swap-oob="innerHTML">🍺 {{ tournament.title }}</h1>
+    {% endif %}
+    {% endif %}
+    {# Detection for Group Phase Completion #}
+    {% set group_matches = all_matches|selectattr('round.value','eq','group')|list %}
+    {% set group_phase_done = (group_matches|length > 0 and group_matches|rejectattr('status.value','eq','completed')|list|length == 0) %}
+    {% if group_phase_done %}<span id="group-phase-done-marker" data-done="true" style="display:none;"></span>{% endif %}
+
+    {# Hidden markers for animation detection #}
+    {% for m in all_matches %}
+      {% if m.status.value == 'completed' %}
+        {% set w = team_map[m.winner_id] %}
+        {% set loser_id = m.team_b_id if m.winner_id == m.team_a_id else m.team_a_id %}
+        {% set l = team_map[loser_id] %}
+        <span
+          data-match-completed="{{ m.id }}"
+          data-winner-emoji="{{ w.emoji if w else '?' }}"
+          data-winner-name="{{ w.name if w else 'Unbekannt' }}"
+          data-loser-emoji="{{ l.emoji if l else '?' }}"
+          data-loser-name="{{ l.name if l else 'Unbekannt' }}"
+          data-cups-winner="{{ m.cups_a if m.winner_id == m.team_a_id else m.cups_b }}"
+          data-cups-loser="{{ m.cups_b if m.winner_id == m.team_a_id else m.cups_a }}"
+          data-round="{% if m.round.value=='group' %}Gruppe {{ m.group }}{% elif m.round.value=='semifinal' %}Halbfinale{% elif m.round.value=='final' %}Finale{% else %}Platz 3{% endif %}"
+          style="display:none;"></span>
+      {% endif %}
+    {% endfor %}
+
+    {# ── SLIDE 1: Winner Announcement OR Now Playing ── #}
+    {% if tournament.status.value == 'finished' %}
+      {% set final_match = ko_matches|selectattr('round.value','eq','final')|list|first %}
+      <div class="tv-slide" id="slide-winner">
+        {% if final_match and final_match.winner_id %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+          <div style="font-size:5rem;">🏆</div>
+          <div style="font-size:3.5rem;font-weight:700;color:var(--primary);margin:1rem 0;">{{ team_map[final_match.winner_id].emoji }} {{ team_map[final_match.winner_id].name }}</div>
+          <div style="font-size:1.2rem;color:var(--text-muted);">ist der Turniersieger!</div>
+        </div>
+        <script>
+          if (typeof confetti !== 'undefined' && !window.finalConfettiTriggered) {
+            window.finalConfettiTriggered = true;
+            confetti({particleCount:150, spread:70, origin:{y:0.6}, colors:['#f59e0b','#10b981','#fff']});
+            setTimeout(() => { window.finalConfettiTriggered = false; }, 30000); // Re-enable after 30s
+          }
+        </script>
+        {% endif %}
+      </div>
+    {% else %}
+      {% set pw = pending_matches|selectattr('team_a_id')|selectattr('team_b_id')|list %}
+      {% set next = pw|first %}
+      {% set upcoming = pw[1] if pw|length > 1 else None %}
+
+      <div class="tv-slide" id="slide-now">
+        {% if next %}
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:0.5rem;">
+          <div style="margin-bottom:1.5rem;">
+            {% if next.round.value == 'final' %}
+              <div style="font-size:1.5rem; color:var(--primary); font-weight:800; letter-spacing:5px; text-transform:uppercase; text-shadow: 0 0 20px rgba(245,158,11,0.4); margin-bottom:0.5rem;">🏆 DAS FINALE 🏆</div>
+            {% elif next.round.value == 'semifinal' %}
+              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">HALBFINALE</div>
+            {% elif next.round.value == 'third_place' %}
+              <div style="font-size:0.9rem; color:var(--text-muted); font-weight:700; letter-spacing:3px; text-transform:uppercase;">SPIEL UM PLATZ 3</div>
+            {% else %}
+              <div style="font-size:0.7rem; letter-spacing:3px; text-transform:uppercase; color:var(--text-muted);">🎯 Jetzt am Tisch &nbsp;·&nbsp; Gruppe {{ next.group }}</div>
+            {% endif %}
+          </div>
+          
+          <div style="display:flex;align-items:center;gap:3rem;">
+            <div style="font-size:3.5rem;font-weight:700;color:var(--primary);text-align:right;">{{ team_map[next.team_a_id].emoji }}<br>{{ team_map[next.team_a_id].name }}<div style="font-size:0.9rem;color:var(--text-muted);font-weight:400;margin-top:0.3rem;">{{ team_map[next.team_a_id].player1 }} & {{ team_map[next.team_a_id].player2 }}</div></div>
+            <div style="font-size:2rem;color:var(--text-muted);font-style:italic;">vs</div>
+            <div style="font-size:3.5rem;font-weight:700;color:var(--primary);text-align:left;">{{ team_map[next.team_b_id].emoji }}<br>{{ team_map[next.team_b_id].name }}<div style="font-size:0.9rem;color:var(--text-muted);font-weight:400;margin-top:0.3rem;">{{ team_map[next.team_b_id].player1 }} & {{ team_map[next.team_b_id].player2 }}</div></div>
+          </div>
+        </div>
+        {% if upcoming %}
+        <div style="flex-shrink:0;text-align:center;padding:0.75rem 2rem;background:rgba(255,255,255,0.04);border-top:1px solid rgba(255,255,255,0.06);font-size:1rem;">
+          <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-right:1rem;">⏭ Next up</span>
+          <strong>{{ team_map[upcoming.team_a_id].emoji }} {{ team_map[upcoming.team_a_id].name }}</strong>
+          <span style="color:var(--text-muted);margin:0 0.5rem;">vs</span>
+          <strong>{{ team_map[upcoming.team_b_id].emoji }} {{ team_map[upcoming.team_b_id].name }}</strong>
+          <span style="font-size:0.7rem;color:var(--text-muted);margin-left:1rem;">{% if upcoming.round.value=='group' %}Gruppe {{ upcoming.group }}{% elif upcoming.round.value=='semifinal' %}Halbfinale{% else %}Platz 3{% endif %}</span>
+        </div>
+        {% endif %}
+        {% else %}
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:1.5rem;">Alle Spiele abgeschlossen 🎉</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# ── SLIDE 2: Gruppen Tabellen ── #}
+    <div class="tv-slide" id="slide-standings">
+      {% if next %}
+      <div class="mini-chip">🎯 Jetzt: <strong>{{ team_map[next.team_a_id].emoji }} {{ team_map[next.team_a_id].name }}</strong> vs <strong>{{ team_map[next.team_b_id].emoji }} {{ team_map[next.team_b_id].name }}</strong></div>
+      {% endif %}
+      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">Gruppenphase</div>
+      <div class="grid-2" style="flex:1;min-height:0;align-items:start; {% if group_phase_done %}opacity:0.6;{% endif %}">
+        {% for group_label, standings in [('A', standings_a), ('B', standings_b)] %}
+        <div>
+          <div class="section-title" style="margin-top:0; display:flex; justify-content:space-between; align-items:center;">
+            <span>Gruppe {{ group_label }}</span>
+            {% if group_phase_done %}<span class="badge" style="background:var(--success); color:#fff; font-size:0.5rem; letter-spacing:1px;">ABGESCHLOSSEN</span>{% endif %}
+          </div>
+          <div class="table-wrapper">
+            <table class="standings">
+              <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederl.</th><th>Diff.</th></tr>
+              {% for s in standings %}
+              {% set is_playing_group = (next and next.round.value == 'group' and (s.team_id == next.team_a_id or s.team_id == next.team_b_id)) %}
+              <tr style="{% if is_playing_group %}background: rgba(59, 130, 246, 0.08); box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.05);{% endif %}">
+                <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
+                  {{ loop.index }}
+                </td>
+                <td style="font-weight: {{ '600' if loop.index <= 2 else '400' }};">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    {{ s.emoji }} {{ s.name }}
+                    {% if s.is_on_fire %}<span class="on-fire" style="font-size: 0.9rem;">🔥</span>{% endif %}
+                    {% if is_playing_group %}
+                    <span class="badge" style="background: var(--primary); color: #000; font-size: 0.55rem; padding: 0.1rem 0.4rem; animation: pulse 1.5s infinite;">LIVE</span>
+                    {% endif %}
+                  </div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }} & {{ s.player2 }}</div>
+                </td>
+                <td class="text-success">{{ s.wins }}</td>
+                <td class="text-danger">{{ s.losses }}</td>
+                <td style="font-weight: 700; color: {{ 'var(--success)' if s.cup_diff > 0 else 'var(--danger)' if s.cup_diff < 0 else 'inherit' }}">{{ s.cup_diff }}</td>
+              </tr>
+              {% endfor %}
+            </table>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# ── SLIDE 3: Turnierbaum ── #}
+    {% if ko_matches %}
+    <div class="tv-slide" id="slide-bracket">
+      {% if next %}
+      <div class="mini-chip">🎯 Jetzt: <strong>{{ team_map[next.team_a_id].emoji }} {{ team_map[next.team_a_id].name }}</strong> vs <strong>{{ team_map[next.team_b_id].emoji }} {{ team_map[next.team_b_id].name }}</strong></div>
+      {% endif %}
+      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">K.O.-Phase</div>
+      
+      {% set semis = ko_matches|selectattr('round.value','eq','semifinal')|list %}
+      {% set final = ko_matches|selectattr('round.value','eq','final')|list|first %}
+      {% set third = ko_matches|selectattr('round.value','eq','third_place')|list|first %}
+      
+      <div class="bracket-container">
+        <!-- Halbfinals -->
+        <div class="bracket-col">
+          {% for m in semis %}
+          <div class="bracket-match glass-panel"
+               style="{% if next and m.id == next.id %}border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-width: 2px;{% endif %}">
+            <div class="meta" style="font-size:0.6rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+              Halbfinale {{ loop.index }}
+              {% if next and m.id == next.id %}
+              <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
+              {% endif %}
+            </div>
+            <div class="bracket-team {{ 'winner' if m.winner_id == m.team_a_id else '' }}">
+              {% if m.team_a_id %}<span>{{ team_map[m.team_a_id].emoji }} {{ team_map[m.team_a_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+              <span class="bracket-score">{{ m.cups_a if m.cups_a is not none else '-' }}</span>
+            </div>
+            <div class="bracket-team {{ 'winner' if m.winner_id == m.team_b_id else '' }}" style="border-top:1px solid rgba(255,255,255,0.05);">
+              {% if m.team_b_id %}<span>{{ team_map[m.team_b_id].emoji }} {{ team_map[m.team_b_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+              <span class="bracket-score">{{ m.cups_b if m.cups_b is not none else '-' }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Connectors -->
+        <div class="connector-col">
+          <div class="connector-line top"></div>
+          <div class="connector-line bottom"></div>
+          <div class="connector-to-final"></div>
+        </div>
+
+        <!-- Finale -->
+        <div class="bracket-col">
+          {% if final %}
+          <div class="bracket-match glass-panel"
+               style="border-color:var(--primary); {% if next and final.id == next.id %}box-shadow: 0 0 30px rgba(245,158,11,0.6); border-width: 2px;{% else %}box-shadow: 0 0 15px rgba(245,158,11,0.2);{% endif %}">
+            <div class="meta" style="font-size:0.65rem;text-align:center;color:var(--primary);margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+              🏆 Finale
+              {% if next and final.id == next.id %}
+              <span class="badge" style="background: var(--primary); color: #000; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
+              {% endif %}
+            </div>
+            <div class="bracket-team {{ 'winner' if final.winner_id == final.team_a_id else '' }}">
+              {% if final.team_a_id %}<span>{{ team_map[final.team_a_id].emoji }} {{ team_map[final.team_a_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+              <span class="bracket-score">{{ final.cups_a if final.cups_a is not none else '-' }}</span>
+            </div>
+            <div class="bracket-team {{ 'winner' if final.winner_id == final.team_b_id else '' }}" style="border-top:1px solid rgba(255,255,255,0.05);">
+              {% if final.team_b_id %}<span>{{ team_map[final.team_b_id].emoji }} {{ team_map[final.team_b_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+              <span class="bracket-score">{{ final.cups_b if final.cups_b is not none else '-' }}</span>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Platz 3 (Dezent in der Ecke) -->
+      {% if third %}
+      <div style="position: absolute; bottom: 0.5rem; right: 0.5rem; opacity: 0.8;">
+        <div class="bracket-match glass-panel"
+             style="padding: 0.3rem 0.6rem; min-width: 140px; border:none; background: rgba(255,255,255,0.03); {% if next and third.id == next.id %}border: 2px solid #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); opacity: 1;{% endif %}">
+          <div class="meta" style="font-size:0.5rem; text-align:center; margin-bottom:0.2rem; display:flex; justify-content:center; align-items:center; gap:0.3rem;">
+            Platz 3
+            {% if next and third.id == next.id %}
+            <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.4rem; padding: 0.05rem 0.2rem; animation: pulse 1.5s infinite;">LIVE</span>
+            {% endif %}
+          </div>
+          <div class="bracket-team {{ 'winner' if third.winner_id == third.team_a_id else '' }}" style="font-size: 0.7rem; padding: 0.1rem 0;">
+            {% if third.team_a_id %}<span>{{ team_map[third.team_a_id].emoji }} {{ team_map[third.team_a_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+            <span class="bracket-score" style="font-size: 0.75rem; min-width: auto;">{{ third.cups_a if third.cups_a is not none else '-' }}</span>
+          </div>
+          <div class="bracket-team {{ 'winner' if third.winner_id == third.team_b_id else '' }}" style="border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.7rem; padding: 0.1rem 0;">
+            {% if third.team_b_id %}<span>{{ team_map[third.team_b_id].emoji }} {{ team_map[third.team_b_id].name }}</span>{% else %}<span style="color:var(--text-muted);">TBD</span>{% endif %}
+            <span class="bracket-score" style="font-size: 0.75rem; min-width: auto;">{{ third.cups_b if third.cups_b is not none else '-' }}</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
-  {% else %}
-    {% set next = pending_matches|selectattr('team_a_id')|selectattr('team_b_id')|list|first %}
-    {% if next %}
-    <div style="text-align:center;margin-bottom:1.5rem;padding:1.5rem;background:#1e3a5f;border-radius:12px;border:2px solid #f59e0b">
-      <div style="font-size:.8rem;color:#f59e0b;text-transform:uppercase;letter-spacing:2px;margin-bottom:.5rem">Jetzt am Tisch</div>
-      <div style="font-size:1.8rem;font-weight:700">{{ team_map[next.team_a_id].name }}</div>
-      <div style="color:#64748b;margin:.25rem 0">vs</div>
-      <div style="font-size:1.8rem;font-weight:700">{{ team_map[next.team_b_id].name }}</div>
-      <div style="font-size:.85rem;color:#64748b;margin-top:.5rem">
-        {% if next.round.value=='group' %}Gruppe {{ next.group }}{% elif next.round.value=='semifinal' %}Halbfinale{% elif next.round.value=='final' %}🏆 Finale{% else %}Spiel um Platz 3{% endif %}
+
+    {# SLIDE 4: Gesamtranking – nur wenn Turnier abgeschlossen #}
+    {% if tournament.status.value == 'finished' %}
+    <div class="tv-slide" id="slide-ranking">
+      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">Gesamtranking</div>
+      <div style="flex:1; width: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; justify-content: center;">
+        {% for r in overall_ranking %}
+        <div class="glass-panel" style="display: flex; align-items: center; padding: 0.5rem 1rem; gap: 1rem; {% if r.rank <= 3 %}border-left: 4px solid var(--primary); background: rgba(245,158,11,0.05);{% endif %}">
+          <div style="font-size: 1.1rem; font-weight: 800; color: var(--text-muted); min-width: 35px;">#{{ r.rank }}</div>
+          <div style="font-size: 1.3rem;">{{ r.team_emoji }}</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 1rem;">{{ r.team_name }}</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">{{ r.team_players }}</div>
+          </div>
+          <div style="font-weight: 700; color: var(--primary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">{{ r.status }}</div>
+        </div>
+        {% else %}
+        <div style="text-align:center; color:var(--text-muted); margin-top:2rem;">Ranking wird berechnet...</div>
+        {% endfor %}
       </div>
     </div>
     {% endif %}
-  {% endif %}
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
-    {% for group_label, standings in [('A', standings_a), ('B', standings_b)] %}
-    <div>
-      <div style="font-size:.7rem;color:#64748b;text-transform:uppercase;margin-bottom:.5rem">Gruppe {{ group_label }}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:.85rem">
-        <tr style="color:#64748b"><th style="text-align:left;padding:2px 4px">#</th><th style="text-align:left">Team</th><th>S</th><th>±</th></tr>
-        {% for s in standings %}
-        <tr style="border-top:1px solid #1e293b">
-          <td style="padding:4px">{{ loop.index }}</td>
-          <td style="padding:4px;font-weight:{{ '600' if loop.index<=2 else '400' }}">{{ s.name }}{% if loop.index<=2 %} <span style="font-size:.65rem;background:#f59e0b;color:#0f172a;border-radius:3px;padding:0 4px">KO</span>{% endif %}</td>
-          <td style="text-align:center">{{ s.wins }}</td>
-          <td style="text-align:center;color:{{ '#4ade80' if s.cup_diff >= 0 else '#f87171' }}">{{ s.cup_diff }}</td>
-        </tr>
-        {% endfor %}
-      </table>
+  {% else %}
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100dvh; color:var(--text-muted);">
+      <div style="font-size:4rem; margin-bottom:1rem;">🍺</div>
+      <h2>Kein aktives Turnier</h2>
+      <p>Bitte erstelle ein Turnier im Admin-Bereich.</p>
     </div>
-    {% endfor %}
-  </div>
-
-  {% if ko_matches %}
-  <div style="font-size:.7rem;color:#64748b;text-transform:uppercase;margin-bottom:.5rem">K.O.-Phase</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem">
-    {% for match in ko_matches %}
-    <div style="background:#1e293b;border-radius:8px;padding:.75rem">
-      <div style="font-size:.65rem;color:#64748b;margin-bottom:.25rem">{% if match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}🏆 Finale{% else %}Platz 3{% endif %}</div>
-      <div style="font-weight:600">{% if match.team_a_id %}{{ team_map[match.team_a_id].name }}{% else %}TBD{% endif %}</div>
-      <div style="color:#64748b;font-size:.75rem;margin:2px 0">vs</div>
-      <div style="font-weight:600">{% if match.team_b_id %}{{ team_map[match.team_b_id].name }}{% else %}TBD{% endif %}</div>
-      {% if match.winner_id %}<div style="margin-top:4px;font-size:.75rem;color:#4ade80">🏆 {{ team_map[match.winner_id].name }} {{ match.cups_a }}:{{ match.cups_b }}</div>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
   {% endif %}
 </div>

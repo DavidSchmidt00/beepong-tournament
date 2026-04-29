@@ -3,58 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Turnier Setup</title>
+  <title>Turnier Setup – Beer Pong</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=2">
   <style>
-    body{font-family:system-ui,sans-serif;max-width:600px;margin:2rem auto;padding:0 1rem;background:#0f172a;color:#f1f5f9}
-    h1{color:#f59e0b}
-    .team-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.5rem}
-    input,select{width:100%;padding:.5rem;border:1px solid #334155;border-radius:4px;background:#1e293b;color:#f1f5f9;box-sizing:border-box}
-    button{background:#f59e0b;color:#0f172a;border:none;padding:.75rem 2rem;border-radius:6px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:1rem}
-    label{font-size:.8rem;color:#94a3b8;display:block;margin-bottom:.25rem}
-    .section{margin-bottom:1.5rem}
-    h3{color:#94a3b8;font-size:.9rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem}
+    body { max-width: 800px; margin: 2rem auto; }
+    @media (max-width: 900px) {
+      body { margin: 0 auto !important; }
+    }
+    .admin-pass-section { max-width: 50%; }
+    @media (max-width: 900px) {
+      .admin-pass-section { max-width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <h1>🍺 Turnier Setup</h1>
-  <form method="post" action="/setup" id="setup-form">
-    <div class="section">
-      <label>Turniername</label>
-      <input type="text" name="title" value="Beer Pong Turnier" required>
-    </div>
-    <div class="section">
-      <label>Anzahl Spieler</label>
-      <select name="num_players" id="num-players" onchange="updateTeamFields()">
-        {% for n in num_players_options %}
-        <option value="{{ n }}" {% if n == 12 %}selected{% endif %}>{{ n }} Spieler ({{ n // 2 }} Teams)</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="section">
-      <label>Admin-Passwort</label>
-      <input type="password" name="admin_password" required minlength="4">
-    </div>
-    <div class="section">
-      <h3>Teams</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.25rem">
-        <span style="font-size:.75rem;color:#64748b">Teamname</span>
-        <span style="font-size:.75rem;color:#64748b">Spieler 1</span>
-        <span style="font-size:.75rem;color:#64748b">Spieler 2</span>
+  <div class="glass-panel">
+    <h1>🍺 Turnier Setup</h1>
+    <p style="color: var(--text-muted); margin-bottom: 2rem;">Konfiguriere dein neues Beer Pong Turnier. Wähle die Anzahl der Spieler und lege die Teams fest.</p>
+    
+    <form method="post" action="/setup" id="setup-form">
+      <div class="grid-2 mb-4">
+        <div class="section">
+          <label>Turniername</label>
+          <input type="text" name="title" value="Beer Pong Turnier" required>
+        </div>
+        <div class="section">
+          <label>Anzahl Spieler</label>
+          <select name="num_players" id="num-players" onchange="updateTeamFields()">
+            {% for n in num_players_options %}
+            <option value="{{ n }}" {% if n == 12 %}selected{% endif %}>{{ n }} Spieler ({{ n // 2 }} Teams)</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
-      <div id="team-fields"></div>
-    </div>
-    <button type="submit">Turnier starten 🚀</button>
-  </form>
+      
+      <div class="section mb-4 admin-pass-section">
+        <label>Admin-Passwort</label>
+        <input type="password" name="admin_password" required minlength="4" placeholder="Wird für den Login benötigt">
+      </div>
+      
+      <div class="section mt-6">
+        <h3 class="section-title">Team Konfiguration</h3>
+        <div id="team-fields" class="setup-grid"></div>
+      </div>
+      
+      <button type="submit" class="btn btn-success w-full mt-4" style="padding: 1rem; font-size: 1.1rem;">
+        Turnier starten 🚀
+      </button>
+    </form>
+  </div>
+
   <script>
     function updateTeamFields(){
       const n=parseInt(document.getElementById('num-players').value);
       const container=document.getElementById('team-fields');
       container.innerHTML='';
       for(let i=1;i<=n/2;i++){
-        container.innerHTML+=`<div class="team-row">
-          <input type="text" name="team_name_${i}" placeholder="Team ${i}" required>
-          <input type="text" name="player1_${i}" placeholder="Spieler 1" required>
-          <input type="text" name="player2_${i}" placeholder="Spieler 2" required>
+        container.innerHTML+=`
+        <div class="team-setup-card">
+          <label style="color: var(--primary);">Team ${i}</label>
+          <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" name="emoji_${i}" value="🍺" maxlength="2" style="width: 60px; text-align: center; font-size: 1.2rem;" title="Wähle ein Emoji">
+              <input type="text" name="team_name_${i}" placeholder="Teamname" required style="flex: 1;">
+            </div>
+            <div class="flex-mobile-stack" style="display:flex; gap:0.5rem;">
+              <input type="text" name="player1_${i}" placeholder="Spieler 1" required>
+              <input type="text" name="player2_${i}" placeholder="Spieler 2" required>
+            </div>
+          </div>
         </div>`;
       }
     }

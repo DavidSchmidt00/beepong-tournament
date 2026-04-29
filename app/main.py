@@ -3,9 +3,10 @@ import random
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 from app.auth import (
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -64,6 +66,15 @@ def post_logout():
     return response
 
 
+@app.post("/reset")
+def post_reset(db: Session = Depends(get_db), _=Depends(require_auth)):
+    db.query(Match).delete()
+    db.query(Team).delete()
+    db.query(Tournament).delete()
+    db.commit()
+    return RedirectResponse(url="/setup", status_code=302)
+
+
 # ── Setup routes ──────────────────────────────────────────────────────────────
 
 @app.get("/setup", response_class=HTMLResponse)
@@ -85,6 +96,7 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
     teams_input = [
         {
             "name": form.get(f"team_name_{i}", f"Team {i}"),
+            "emoji": form.get(f"emoji_{i}", "🍺"),
             "player1": form.get(f"player1_{i}", ""),
             "player2": form.get(f"player2_{i}", ""),
         }
@@ -106,6 +118,7 @@ async def post_setup(request: Request, db: Session = Depends(get_db)):
         t = Team(
             tournament_id=tournament.id,
             name=td["name"],
+            emoji=td["emoji"],
             player1=td["player1"],
             player2=td["player2"],
             group="A",
@@ -165,15 +178,91 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
     team_map = {t.id: t for t in teams}
     for s in standings_a + standings_b:
         s["name"] = team_map[s["team_id"]].name
+        s["emoji"] = team_map[s["team_id"]].emoji
         s["player1"] = team_map[s["team_id"]].player1
         s["player2"] = team_map[s["team_id"]].player2
+        s["is_on_fire"] = s["wins"] >= 3 or s["cup_diff"] >= 10
 
-    pending_matches = [m for m in matches if m.status == MatchStatus.pending]
+    all_pending = [m for m in matches if m.status == MatchStatus.pending]
+
+    # Pin current match to position 0
+    if tournament.current_match_id:
+        current = next((m for m in all_pending if m.id == tournament.current_match_id), None)
+        if current:
+            all_pending = [current] + [m for m in all_pending if m.id != tournament.current_match_id]
+
+    # Pin next match to position 1
+    if tournament.next_match_id and len(all_pending) > 1:
+        pinned = next((m for m in all_pending if m.id == tournament.next_match_id), None)
+        if pinned and all_pending[0].id != tournament.next_match_id:
+            rest = [m for m in all_pending[1:] if m.id != tournament.next_match_id]
+            all_pending = [all_pending[0], pinned] + rest
+
+    pending_matches = all_pending
     completed_count = sum(1 for m in matches if m.status == MatchStatus.completed)
     ko_matches = [m for m in matches if m.round != MatchRound.group]
 
+    # Overall Ranking Logic
+    overall_ranking = []
+    final_m = next((m for m in ko_matches if m.round == MatchRound.final), None)
+    third_m = next((m for m in ko_matches if m.round == MatchRound.third_place), None)
+    
+    # 1. Finalists
+    if final_m and final_m.winner_id:
+        w_id = final_m.winner_id
+        r_id = final_m.team_b_id if w_id == final_m.team_a_id else final_m.team_a_id
+        w = team_map.get(w_id)
+        r = team_map.get(r_id)
+        overall_ranking.append({
+            "rank": 1, "team_id": w_id, "team_name": w.name if w else "Team",
+            "team_emoji": w.emoji if w else "🏆", "team_players": f"{w.player1} & {w.player2}" if w else "",
+            "status": "🏆 SIEGER"
+        })
+        overall_ranking.append({
+            "rank": 2, "team_id": r_id, "team_name": r.name if r else "Team",
+            "team_emoji": r.emoji if r else "🥈", "team_players": f"{r.player1} & {r.player2}" if r else "",
+            "status": "🥈 2. PLATZ"
+        })
+    
+    # 2. 3rd Place
+    if third_m and third_m.winner_id:
+        t3_id = third_m.winner_id
+        t4_id = third_m.team_b_id if t3_id == third_m.team_a_id else third_m.team_a_id
+        t3 = team_map.get(t3_id)
+        t4 = team_map.get(t4_id)
+        overall_ranking.append({
+            "rank": 3, "team_id": t3_id, "team_name": t3.name if t3 else "Team",
+            "team_emoji": t3.emoji if t3 else "🥉", "team_players": f"{t3.player1} & {t3.player2}" if t3 else "",
+            "status": "🥉 3. PLATZ"
+        })
+        overall_ranking.append({
+            "rank": 4, "team_id": t4_id, "team_name": t4.name if t4 else "Team",
+            "team_emoji": t4.emoji if t4 else "🍺", "team_players": f"{t4.player1} & {t4.player2}" if t4 else "",
+            "status": "4. PLATZ"
+        })
+
+    # 3. Add all other teams based on group stage performance
+    ranked_ids = {r["team_id"] for r in overall_ranking}
+    all_standings = standings_a + standings_b
+    all_standings.sort(key=lambda x: (x["wins"], x["cup_diff"]), reverse=True)
+    
+    for s in all_standings:
+        tid = s["team_id"]
+        if tid not in ranked_ids:
+            t = team_map.get(tid)
+            overall_ranking.append({
+                "rank": len(overall_ranking) + 1,
+                "team_id": tid,
+                "team_name": t.name if t else "Team",
+                "team_emoji": t.emoji if t else "🍺",
+                "team_players": f"{t.player1} & {t.player2}" if t else "",
+                "status": f"{s['wins']}S / {s['losses']}N"
+            })
+
     return {
         "tournament": tournament,
+        "current_match_id": tournament.current_match_id,
+        "next_match_id": tournament.next_match_id,
         "standings_a": standings_a,
         "standings_b": standings_b,
         "pending_matches": pending_matches,
@@ -182,6 +271,7 @@ def _build_bracket_context(tournament: Tournament, db: Session) -> dict:
         "ko_matches": ko_matches,
         "all_matches": matches,
         "team_map": team_map,
+        "overall_ranking": overall_ranking,
     }
 
 
@@ -193,6 +283,7 @@ def get_admin(request: Request, db: Session = Depends(get_db), _=Depends(require
     if not tournament:
         return RedirectResponse(url="/setup")
     ctx = _build_bracket_context(tournament, db)
+    ctx["request"] = request
     return templates.TemplateResponse(request, "admin.html", ctx)
 
 
@@ -217,6 +308,10 @@ def post_result(
     db.flush()
 
     tournament = db.query(Tournament).filter_by(id=match.tournament_id).first()
+    if tournament.current_match_id == match_id:
+        tournament.current_match_id = None
+    if tournament.next_match_id == match_id:
+        tournament.next_match_id = None
     group_matches = [m for m in tournament.matches if m.round == MatchRound.group]
 
     if all(m.status == MatchStatus.completed for m in group_matches):
@@ -244,6 +339,102 @@ def post_result(
     if final_match and final_match.status == MatchStatus.completed:
         tournament.status = TournamentStatus.finished
 
+    db.commit()
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@app.post("/matches/reorder")
+async def post_reorder_matches(
+    request: Request,
+    db: Session = Depends(get_db),
+    _=Depends(require_auth),
+):
+    data = await request.json()
+    order = data.get("order", [])
+    tournament = db.query(Tournament).first()
+    if not tournament:
+        raise HTTPException(status_code=404)
+    tournament.current_match_id = order[0] if len(order) > 0 else None
+    tournament.next_match_id = order[1] if len(order) > 1 else None
+    db.commit()
+    return Response(status_code=204)
+
+
+@app.post("/matches/{match_id}/start")
+def post_start_match(
+    match_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_auth),
+):
+    match = db.query(Match).filter_by(id=match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    
+    match.started_at = datetime.now(timezone.utc)
+    db.commit()
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@app.post("/matches/{match_id}/undo")
+def post_undo_match(
+    match_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_auth),
+):
+    match = db.query(Match).filter_by(id=match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    
+    tournament = db.query(Tournament).filter_by(id=match.tournament_id).first()
+    if tournament.status == TournamentStatus.finished:
+        tournament.status = TournamentStatus.knockout
+
+    # If it's a group match and knockout has started, we shouldn't really undo it
+    # without resetting the knockout phase, but for simplicity we allow it or block it.
+    if match.round == MatchRound.group and tournament.status in [TournamentStatus.knockout, TournamentStatus.finished]:
+        raise HTTPException(status_code=400, detail="Cannot undo group match after KO phase started")
+
+    match.winner_id = None
+    match.cups_a = None
+    match.cups_b = None
+    match.status = MatchStatus.pending
+    # We keep started_at so the timer doesn't fully reset, or we clear it:
+    match.started_at = None
+    match.played_at = None
+
+    db.commit()
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@app.post("/matches/{match_id}/set-current")
+def post_set_current_match(
+    match_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_auth),
+):
+    match = db.query(Match).filter_by(id=match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    tournament = db.query(Tournament).filter_by(id=match.tournament_id).first()
+    tournament.current_match_id = match_id
+    # If this match was queued as next, remove it from that slot
+    if tournament.next_match_id == match_id:
+        tournament.next_match_id = None
+    db.commit()
+    return RedirectResponse(url="/admin", status_code=302)
+
+
+@app.post("/matches/{match_id}/set-next")
+def post_set_next_match(
+    match_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_auth),
+):
+    match = db.query(Match).filter_by(id=match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    tournament = db.query(Tournament).filter_by(id=match.tournament_id).first()
+    tournament.next_match_id = match_id
     db.commit()
     return RedirectResponse(url="/admin", status_code=302)
 
@@ -282,8 +473,9 @@ def _generate_ko_matches(tournament: Tournament, db: Session) -> None:
 def get_tv(request: Request, db: Session = Depends(get_db)):
     tournament = db.query(Tournament).first()
     if not tournament:
-        return RedirectResponse(url="/setup")
+        return templates.TemplateResponse(request, "tv.html", {"request": request, "tournament": None})
     ctx = _build_bracket_context(tournament, db)
+    ctx["request"] = request
     return templates.TemplateResponse(request, "tv.html", ctx)
 
 
@@ -291,6 +483,7 @@ def get_tv(request: Request, db: Session = Depends(get_db)):
 def get_bracket_partial(request: Request, db: Session = Depends(get_db)):
     tournament = db.query(Tournament).first()
     if not tournament:
-        return HTMLResponse("<p>Kein Turnier aktiv</p>")
+        return templates.TemplateResponse(request, "partials/bracket.html", {"request": request, "tournament": None})
     ctx = _build_bracket_context(tournament, db)
+    ctx["request"] = request
     return templates.TemplateResponse(request, "partials/bracket.html", ctx)

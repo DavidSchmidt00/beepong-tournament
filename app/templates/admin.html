@@ -4,130 +4,401 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin – {{ tournament.title }}</title>
+  <link rel="stylesheet" href="/static/css/style.css?v=2">
   <style>
-    *{box-sizing:border-box}
-    body{font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:1rem;background:#0f172a;color:#f1f5f9}
-    h1{color:#f59e0b;font-size:1.2rem;margin:0 0 .5rem}
-    .progress{background:#1e293b;border-radius:8px;height:8px;margin-bottom:1rem}
-    .progress-bar{background:#f59e0b;height:8px;border-radius:8px;transition:width .3s}
-    .progress-label{font-size:.75rem;color:#94a3b8;margin-bottom:.25rem}
-    .match-card{background:#1e293b;border-radius:10px;padding:1rem;margin-bottom:.75rem;cursor:pointer;border:2px solid transparent}
-    .match-card:hover{border-color:#f59e0b}
-    .match-card .vs{text-align:center;color:#64748b;margin:.25rem 0;font-size:.8rem}
-    .match-card .team{font-weight:600;font-size:1rem}
-    .section-title{font-size:.75rem;color:#94a3b8;text-transform:uppercase;margin:1rem 0 .5rem}
-    .standings table{width:100%;border-collapse:collapse;font-size:.85rem}
-    .standings th{color:#94a3b8;text-align:left;padding:.25rem .5rem}
-    .standings td{padding:.25rem .5rem;border-top:1px solid #0f172a}
-    .badge{background:#f59e0b;color:#0f172a;border-radius:4px;padding:0 6px;font-size:.7rem;font-weight:700}
-    .finished-banner{background:#16a34a;text-align:center;border-radius:10px;padding:1.5rem;margin:1rem 0;font-size:1.2rem;font-weight:700}
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100}
-    .modal-overlay.open{display:flex;align-items:center;justify-content:center}
-    .modal{background:#1e293b;border-radius:12px;padding:1.5rem;width:90%;max-width:360px}
-    .modal h2{margin-top:0;font-size:1rem;color:#f59e0b}
-    .cup-row{display:flex;align-items:center;gap:.5rem;margin:.5rem 0}
-    .cup-row label{flex:1;font-size:.9rem}
-    .cup-row input{width:60px;padding:.4rem;background:#0f172a;color:#f1f5f9;border:1px solid #334155;border-radius:4px;text-align:center}
-    .btn{background:#f59e0b;color:#0f172a;border:none;padding:.6rem 1rem;border-radius:6px;font-weight:700;cursor:pointer;width:100%;margin-top:.5rem}
-    .btn-cancel{background:#334155;color:#f1f5f9;margin-top:.25rem}
+    body { max-width: 900px; margin: 0 auto; }
+    @media (max-width: 900px) {
+      body { margin: 0 auto !important; }
+    }
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      gap: 1rem;
+    }
+    @media (max-width: 900px) {
+      .header-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+      }
+      .header-actions h1 {
+        font-size: 1.5rem;
+      }
+      .header-actions div {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+      .header-actions .btn {
+        flex: 1;
+        min-width: 80px;
+      }
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-  <h1>🍺 {{ tournament.title }}</h1>
-  <div class="progress-label">{{ completed_count }} / {{ total_count }} Spiele</div>
-  <div class="progress"><div class="progress-bar" style="width:{{ (completed_count / total_count * 100)|int if total_count else 0 }}%"></div></div>
+  <div class="header-actions">
+    <h1 style="margin: 0;">🍺 {{ tournament.title }}</h1>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <a href="/tv" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; min-width: 90px; justify-content: center;" target="_blank">📺 TV</a>
+      <form method="post" action="/logout" style="margin: 0;">
+        <button type="submit" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; min-width: 90px;">Logout</button>
+      </form>
+      <button type="button" onclick="document.getElementById('reset-modal').classList.add('open')" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; min-width: 90px; border-color: rgba(239, 68, 68, 0.3); color: var(--danger);">🗑 Reset</button>
+    </div>
+  </div>
+
+  <!-- Reset Confirmation Modal -->
+  <div class="modal-overlay" id="reset-modal">
+    <div class="modal" style="max-width: 340px; text-align: center;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+      <h2 style="color: var(--danger); font-size: 1.3rem; margin-bottom: 0.5rem;">Turnier löschen?</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Alle Daten gehen unwiderruflich verloren.</p>
+      <form method="post" action="/reset" style="margin: 0 0 0.75rem;">
+        <button type="submit" class="btn btn-danger w-full" style="padding: 0.85rem;">Ja, alles löschen</button>
+      </form>
+      <button type="button" class="btn btn-secondary w-full" onclick="document.getElementById('reset-modal').classList.remove('open')" style="padding: 0.85rem;">Abbrechen</button>
+    </div>
+  </div>
+
+  <div class="glass-panel" style="margin-bottom: 2rem;">
+    <div class="progress-label">
+      <span>Turnierfortschritt</span>
+      <span>{{ completed_count }} / {{ total_count }} Spiele</span>
+    </div>
+    <div class="progress">
+      <div class="progress-bar" style="width:{{ (completed_count / total_count * 100)|int if total_count else 0 }}%"></div>
+    </div>
+  </div>
 
   {% if tournament.status.value == 'finished' %}
     {% set final_match = ko_matches|selectattr('round.value','eq','final')|list|first %}
     {% if final_match and final_match.winner_id %}
-      <div class="finished-banner">🏆 {{ team_map[final_match.winner_id].name }} gewinnt!</div>
+      <div class="finished-banner">🏆 {{ team_map[final_match.winner_id].emoji }} {{ team_map[final_match.winner_id].name }} gewinnt das Turnier! 🏆</div>
+      <script>
+        window.onload = function() {
+          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#f59e0b', '#10b981', '#ffffff'] });
+        };
+      </script>
     {% endif %}
   {% endif %}
 
   {% if pending_matches %}
-  <div class="section-title">Nächste Spiele</div>
-  {% for match in pending_matches[:4] %}
+  <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+    <span>Spielplan</span>
+    {% if tournament.status.value == 'group_stage' and pending_matches|length > 1 %}
+    <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: normal;">↕ ziehen zum Sortieren</span>
+    {% endif %}
+  </div>
+
+  <div id="match-queue" style="display: flex; flex-direction: column; gap: 0.6rem;">
+  {% for match in pending_matches %}
     {% if match.team_a_id and match.team_b_id %}
-    <div class="match-card" onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})">
-      <div class="team">{{ team_map[match.team_a_id].name }}</div>
-      <div class="vs">vs</div>
-      <div class="team">{{ team_map[match.team_b_id].name }}</div>
-      <div style="margin-top:.5rem;font-size:.75rem;color:#64748b">
-        {% if match.round.value=='group' %}Gruppe {{ match.group }}{% elif match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}Finale{% else %}Spiel um Platz 3{% endif %}
+    {% set pos = loop.index0 %}
+    <div class="queue-item"
+         data-match-id="{{ match.id }}"
+         data-team-a-label="{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}"
+         data-team-b-label="{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}"
+         data-team-a-id="{{ match.team_a_id }}"
+         data-team-b-id="{{ match.team_b_id }}"
+         style="display: flex; align-items: center; gap: 0.75rem; border-radius: var(--radius-md); padding: 0.75rem 0.85rem; transition: opacity 0.2s, border-color 0.2s;
+                {% if pos == 0 %}border: 1px solid rgba(245,158,11,0.5); background: rgba(245,158,11,0.05);
+                {% elif pos == 1 %}border: 1px solid var(--border-color); background: rgba(255,255,255,0.03); opacity: 0.75;
+                {% else %}border: 1px solid var(--border-color); background: rgba(255,255,255,0.02); opacity: 0.5;{% endif %}">
+      {% if tournament.status.value == 'group_stage' and pending_matches|length > 1 %}
+      <div class="drag-handle" style="color: var(--text-muted); cursor: grab; font-size: 1.1rem; flex-shrink: 0; padding: 0 0.1rem; line-height: 1; user-select: none;">⠿</div>
+      {% endif %}
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 0.95rem; font-weight: 600; {% if pos == 0 %}color: var(--primary);{% endif %}">
+          {{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}
+          <span style="color: var(--text-muted); font-weight: 400; font-size: 0.85rem;"> vs </span>
+          {{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+          {% if match.round.value == 'group' %}Gruppe {{ match.group }}{% elif match.round.value == 'semifinal' %}Halbfinale{% elif match.round.value == 'final' %}Finale{% else %}Spiel um Platz 3{% endif %}
+          · {{ team_map[match.team_a_id].player1 }} &amp; {{ team_map[match.team_b_id].player1 }}
+        </div>
       </div>
+      {% if pos == 0 %}
+        <button class="btn" style="flex-shrink: 0; padding: 0.45rem 0.75rem; font-size: 0.75rem; white-space: nowrap;"
+          onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})">
+          Ergebnis
+        </button>
+      {% elif pos == 1 %}
+        <span class="pos-badge" style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;">Danach</span>
+      {% endif %}
     </div>
     {% endif %}
   {% endfor %}
+  </div>
+
+  {% if tournament.status.value == 'group_stage' and pending_matches|length > 1 %}
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+  <script>
+    (function() {
+      const list = document.getElementById('match-queue');
+      if (!list) return;
+
+      Sortable.create(list, {
+        handle: '.drag-handle',
+        animation: 150,
+        onEnd: function() {
+          updateStyles();
+          const order = [...list.querySelectorAll('.queue-item')]
+            .map(el => parseInt(el.dataset.matchId));
+          fetch('/matches/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order })
+          });
+        }
+      });
+
+      function updateStyles() {
+        list.querySelectorAll('.queue-item').forEach((el, i) => {
+          // Border & background
+          if (i === 0) {
+            el.style.border = '1px solid rgba(245,158,11,0.5)';
+            el.style.background = 'rgba(245,158,11,0.05)';
+            el.style.opacity = '1';
+          } else if (i === 1) {
+            el.style.border = '1px solid var(--border-color)';
+            el.style.background = 'rgba(255,255,255,0.03)';
+            el.style.opacity = '0.75';
+          } else {
+            el.style.border = '1px solid var(--border-color)';
+            el.style.background = 'rgba(255,255,255,0.02)';
+            el.style.opacity = '0.5';
+          }
+          // Team name color
+          const nameEl = el.querySelector('div > div:first-child');
+          if (nameEl) nameEl.style.color = i === 0 ? 'var(--primary)' : '';
+
+          // Ergebnis button & Danach badge
+          let btn = el.querySelector('button.btn');
+          let badge = el.querySelector('.pos-badge');
+
+          if (i === 0) {
+            if (!btn) {
+              badge && badge.remove();
+              btn = document.createElement('button');
+              btn.className = 'btn';
+              btn.style.cssText = 'flex-shrink:0;padding:0.45rem 0.75rem;font-size:0.75rem;white-space:nowrap;';
+              btn.textContent = 'Ergebnis';
+              el.appendChild(btn);
+            }
+            const aLabel = el.dataset.teamALabel;
+            const bLabel = el.dataset.teamBLabel;
+            const mid = el.dataset.matchId;
+            const aId = el.dataset.teamAId;
+            const bId = el.dataset.teamBId;
+            btn.onclick = () => openModal(parseInt(mid), aLabel, bLabel, parseInt(aId), parseInt(bId));
+          } else if (i === 1) {
+            btn && btn.remove();
+            if (!badge) {
+              badge = document.createElement('span');
+              badge.className = 'pos-badge';
+              badge.style.cssText = 'font-size:0.6rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;flex-shrink:0;';
+              el.appendChild(badge);
+            }
+            badge.textContent = 'Danach';
+          } else {
+            btn && btn.remove();
+            badge && badge.remove();
+          }
+        });
+      }
+    })();
+  </script>
   {% endif %}
 
-  <div class="section-title">Gruppenstand A</div>
-  <div class="standings"><table>
-    <tr><th>#</th><th>Team</th><th>S</th><th>N</th><th>±</th></tr>
-    {% for s in standings_a %}
-    <tr><td>{{ loop.index }}</td><td>{{ s.name }} {% if loop.index<=2 %}<span class="badge">KO</span>{% endif %}</td><td>{{ s.wins }}</td><td>{{ s.losses }}</td><td>{{ s.cup_diff }}</td></tr>
-    {% endfor %}
-  </table></div>
+  {% endif %}
 
-  <div class="section-title">Gruppenstand B</div>
-  <div class="standings"><table>
-    <tr><th>#</th><th>Team</th><th>S</th><th>N</th><th>±</th></tr>
-    {% for s in standings_b %}
-    <tr><td>{{ loop.index }}</td><td>{{ s.name }} {% if loop.index<=2 %}<span class="badge">KO</span>{% endif %}</td><td>{{ s.wins }}</td><td>{{ s.losses }}</td><td>{{ s.cup_diff }}</td></tr>
-    {% endfor %}
-  </table></div>
+  <div class="grid-2 mt-6">
+    <div>
+      <div class="section-title">Gruppe A</div>
+      <div class="table-wrapper">
+        <table class="standings">
+          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederl.</th><th>Diff.</th></tr>
+          {% for s in standings_a %}
+          <tr style="position: relative;">
+            <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
+              {{ loop.index }}
+            </td>
+            <td style="font-weight: {{ '600' if loop.index <= 2 else '400' }};">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                {{ s.emoji }} {{ s.name }}
+                {% if s.is_on_fire %}<span class="on-fire" style="font-size: 0.9rem;">🔥</span>{% endif %}
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }} & {{ s.player2 }}</div>
+            </td>
+            <td class="text-success">{{ s.wins }}</td>
+            <td class="text-danger">{{ s.losses }}</td>
+            <td style="font-weight: 700; color: {{ 'var(--success)' if s.cup_diff > 0 else 'var(--danger)' if s.cup_diff < 0 else 'inherit' }}">{{ s.cup_diff }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Gruppe B</div>
+      <div class="table-wrapper">
+        <table class="standings">
+          <tr><th>#</th><th>Team</th><th>Siege</th><th>Niederl.</th><th>Diff.</th></tr>
+          {% for s in standings_b %}
+          <tr style="position: relative;">
+            <td style="color: var(--text-muted); padding-left: 1rem; position: relative; {% if loop.index <= 2 %}border-left: 3px solid var(--success);{% endif %}">
+              {{ loop.index }}
+            </td>
+            <td style="font-weight: {{ '600' if loop.index <= 2 else '400' }};">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                {{ s.emoji }} {{ s.name }}
+                {% if s.is_on_fire %}<span class="on-fire" style="font-size: 0.9rem;">🔥</span>{% endif %}
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal;">{{ s.player1 }} & {{ s.player2 }}</div>
+            </td>
+            <td class="text-success">{{ s.wins }}</td>
+            <td class="text-danger">{{ s.losses }}</td>
+            <td style="font-weight: 700; color: {{ 'var(--success)' if s.cup_diff > 0 else 'var(--danger)' if s.cup_diff < 0 else 'inherit' }}">{{ s.cup_diff }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
 
   {% if ko_matches %}
-  <div class="section-title">K.O.-Phase</div>
+  <div class="section-title" style="margin-top: 3rem;">K.O.-Phase</div>
+  <div style="display: grid; gap: 1rem;">
   {% for match in ko_matches %}
-  <div class="match-card" {% if match.status.value=='pending' and match.team_a_id and match.team_b_id %}onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})"{% endif %}>
-    <div style="font-size:.7rem;color:#64748b;margin-bottom:.25rem">{% if match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}Finale{% else %}Spiel um Platz 3{% endif %}</div>
-    <div class="team">{% if match.team_a_id %}{{ team_map[match.team_a_id].name }}{% else %}TBD{% endif %}</div>
-    <div class="vs">vs</div>
-    <div class="team">{% if match.team_b_id %}{{ team_map[match.team_b_id].name }}{% else %}TBD{% endif %}</div>
-    {% if match.winner_id %}<div style="margin-top:.4rem;font-size:.75rem;color:#16a34a">🏆 {{ team_map[match.winner_id].name }} ({{ match.cups_a }}:{{ match.cups_b }})</div>{% endif %}
+  <div class="match-card">
+    <div class="meta" style="margin-bottom: 0.5rem; margin-top: 0;">
+      {% if match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}🏆 Finale 🏆{% else %}Spiel um Platz 3{% endif %}
+    </div>
+    
+    <div class="team-container" {% if match.status.value=='pending' and match.team_a_id and match.team_b_id %}onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})"{% endif %}>
+      <div class="team" style="{{ 'color: var(--success);' if match.winner_id == match.team_a_id else '' }}">
+        {% if match.team_a_id %}
+          <div>{{ team_map[match.team_a_id].emoji }} {{ team_map[match.team_a_id].name }}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ team_map[match.team_a_id].player1 }} & {{ team_map[match.team_a_id].player2 }}</div>
+        {% else %}
+          <span style="color:var(--text-muted);font-weight:normal;">TBD</span>
+        {% endif %}
+      </div>
+      <div class="vs">vs</div>
+      <div class="team" style="{{ 'color: var(--success);' if match.winner_id == match.team_b_id else '' }}">
+        {% if match.team_b_id %}
+          <div>{{ team_map[match.team_b_id].emoji }} {{ team_map[match.team_b_id].name }}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">{{ team_map[match.team_b_id].player1 }} & {{ team_map[match.team_b_id].player2 }}</div>
+        {% else %}
+          <span style="color:var(--text-muted);font-weight:normal;">TBD</span>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if match.winner_id %}
+    <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem; font-weight: 700; color: var(--success); background: rgba(16, 185, 129, 0.1); padding: 0.5rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+      <span style="flex: 1;">🏆 {{ team_map[match.winner_id].name }} gewinnt ({{ match.cups_a }} : {{ match.cups_b }})</span>
+      <form method="post" action="/matches/{{ match.id }}/undo" style="margin: 0;">
+        <button type="submit" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; border-color: rgba(239, 68, 68, 0.3); color: var(--danger);" title="Rückgängig">↩ Undo</button>
+      </form>
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
+  </div>
   {% endif %}
 
-  <div style="margin-top:2rem">
-    <a href="/tv" style="color:#64748b;font-size:.8rem">TV-Ansicht →</a>
-    <form method="post" action="/logout" style="display:inline;margin-left:1rem">
-      <button type="submit" style="background:none;border:none;color:#64748b;font-size:.8rem;cursor:pointer">Logout</button>
-    </form>
-  </div>
-
+  <!-- Modal -->
   <div class="modal-overlay" id="result-modal">
     <div class="modal">
       <h2>Ergebnis eintragen</h2>
       <form method="post" id="result-form">
         <input type="hidden" name="winner_id" id="modal-winner-id">
-        <div class="cup-row"><label id="modal-team-a-label">Team A</label><input type="number" name="cups_a" id="modal-cups-a" min="0" max="10" value="0" required><span style="color:#64748b">Cups</span></div>
-        <div class="cup-row"><label id="modal-team-b-label">Team B</label><input type="number" name="cups_b" id="modal-cups-b" min="0" max="10" value="0" required><span style="color:#64748b">Cups</span></div>
-        <div style="display:flex;gap:.5rem;margin-top:.75rem">
-          <button type="button" class="btn" style="background:#16a34a" id="btn-win-a"></button>
-          <button type="button" class="btn" style="background:#dc2626" id="btn-win-b"></button>
+        
+        <div style="display:flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+          <label style="text-align: center;">Wer hat gewonnen?</label>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn btn-secondary w-full" id="btn-win-a" style="font-size: 0.9rem; padding: 0.75rem 0.5rem;"></button>
+            <button type="button" class="btn btn-secondary w-full" id="btn-win-b" style="font-size: 0.9rem; padding: 0.75rem 0.5rem;"></button>
+          </div>
         </div>
-        <button type="submit" class="btn" style="margin-top:.5rem">Speichern</button>
-        <button type="button" class="btn btn-cancel" onclick="closeModal()">Abbrechen</button>
+
+        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: var(--radius-md); text-align: center; border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+          <label style="color: var(--primary); font-size: 1rem; margin-bottom: 1rem; display: block;">Übrig gebliebene Cups (Gewinner)</label>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 1.5rem;">
+            <button type="button" class="btn btn-secondary" style="width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; padding: 0;" onclick="changeCups(-1)">−</button>
+            <input type="number" id="modal-cups-left" min="0" max="10" value="0" required style="font-size: 2rem; text-align: center; padding: 0.5rem; max-width: 80px; background: transparent; border: none; font-weight: 800; color: var(--primary);">
+            <button type="button" class="btn btn-secondary" style="width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; padding: 0;" onclick="changeCups(1)">+</button>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Wie viele Becher standen beim Sieger noch auf dem Tisch?</div>
+        </div>
+
+        <input type="hidden" name="cups_a" id="hidden-cups-a" value="0">
+        <input type="hidden" name="cups_b" id="hidden-cups-b" value="0">
+        
+        <button type="submit" class="btn btn-success w-full" style="padding: 1rem;">Speichern</button>
+        <button type="button" class="btn btn-secondary w-full mt-4" onclick="closeModal()">Abbrechen</button>
       </form>
     </div>
   </div>
+  
   <script>
     let cAId,cBId;
     function openModal(mid,aName,bName,aId,bId){
       cAId=aId;cBId=bId;
       document.getElementById('result-form').action='/matches/'+mid+'/result';
-      document.getElementById('modal-team-a-label').textContent=aName;
-      document.getElementById('modal-team-b-label').textContent=bName;
-      document.getElementById('btn-win-a').textContent='🏆 '+aName+' gewinnt';
-      document.getElementById('btn-win-b').textContent='🏆 '+bName+' gewinnt';
+      document.getElementById('btn-win-a').textContent='🏆 '+aName;
+      document.getElementById('btn-win-b').textContent='🏆 '+bName;
+      
+      // Reset styles
+      document.getElementById('btn-win-a').className = 'btn btn-secondary w-full';
+      document.getElementById('btn-win-b').className = 'btn btn-secondary w-full';
+      
       document.getElementById('modal-winner-id').value='';
       document.getElementById('result-modal').classList.add('open');
     }
     function closeModal(){document.getElementById('result-modal').classList.remove('open')}
-    document.getElementById('btn-win-a').onclick=()=>{document.getElementById('modal-winner-id').value=cAId};
-    document.getElementById('btn-win-b').onclick=()=>{document.getElementById('modal-winner-id').value=cBId};
+    
+    document.getElementById('btn-win-a').onclick=()=>{
+      document.getElementById('modal-winner-id').value=cAId;
+      document.getElementById('btn-win-a').className = 'btn btn-success w-full';
+      document.getElementById('btn-win-b').className = 'btn btn-secondary w-full';
+    };
+    document.getElementById('btn-win-b').onclick=()=>{
+      document.getElementById('modal-winner-id').value=cBId;
+      document.getElementById('btn-win-b').className = 'btn btn-success w-full';
+      document.getElementById('btn-win-a').className = 'btn btn-secondary w-full';
+    };
+    document.getElementById('result-form').onsubmit = function(e) {
+      const winnerId = document.getElementById('modal-winner-id').value;
+      if (!winnerId) {
+        alert("Bitte wähle aus, wer gewonnen hat!");
+        e.preventDefault();
+        return;
+      }
+      const left = parseInt(document.getElementById('modal-cups-left').value) || 0;
+      if (winnerId == cAId) {
+        document.getElementById('hidden-cups-a').value = 10;
+        document.getElementById('hidden-cups-b').value = 10 - left;
+      } else {
+        document.getElementById('hidden-cups-b').value = 10;
+        document.getElementById('hidden-cups-a').value = 10 - left;
+      }
+    };
+    
     document.getElementById('result-modal').onclick=e=>{if(e.target===e.currentTarget)closeModal()};
+
+    function changeCups(delta) {
+      const input = document.getElementById('modal-cups-left');
+      let val = parseInt(input.value) || 0;
+      val = Math.max(0, Math.min(10, val + delta));
+      input.value = val;
+    }
   </script>
 </body>
 </html>

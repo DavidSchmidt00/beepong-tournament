@@ -33,6 +33,9 @@ class Tournament(Base):
     admin_password_hash: Mapped[str] = mapped_column(String(256))
     num_players: Mapped[int] = mapped_column(Integer, default=12)
 
+    current_match_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    next_match_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     teams: Mapped[list["Team"]] = relationship(back_populates="tournament", cascade="all, delete-orphan")
     matches: Mapped[list["Match"]] = relationship(back_populates="tournament", cascade="all, delete-orphan")
 
@@ -43,6 +46,7 @@ class Team(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"))
     name: Mapped[str] = mapped_column(String(50))
+    emoji: Mapped[str] = mapped_column(String(10), default="🍺")
     player1: Mapped[str] = mapped_column(String(50))
     player2: Mapped[str] = mapped_column(String(50))
     group: Mapped[str] = mapped_column(String(1))  # "A" or "B"
@@ -66,6 +70,7 @@ class Match(Base):
     winner_id: Mapped[int | None] = mapped_column(ForeignKey("teams.id"), nullable=True)
     cups_a: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cups_b: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     played_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="matches")
