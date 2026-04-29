@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turnier Setup</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:600px;margin:2rem auto;padding:0 1rem;background:#0f172a;color:#f1f5f9}
+    h1{color:#f59e0b}
+    .team-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.5rem}
+    input,select{width:100%;padding:.5rem;border:1px solid #334155;border-radius:4px;background:#1e293b;color:#f1f5f9;box-sizing:border-box}
+    button{background:#f59e0b;color:#0f172a;border:none;padding:.75rem 2rem;border-radius:6px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:1rem}
+    label{font-size:.8rem;color:#94a3b8;display:block;margin-bottom:.25rem}
+    .section{margin-bottom:1.5rem}
+    h3{color:#94a3b8;font-size:.9rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem}
+  </style>
+</head>
+<body>
+  <h1>🍺 Turnier Setup</h1>
+  <form method="post" action="/setup" id="setup-form">
+    <div class="section">
+      <label>Turniername</label>
+      <input type="text" name="title" value="Beer Pong Turnier" required>
+    </div>
+    <div class="section">
+      <label>Anzahl Spieler</label>
+      <select name="num_players" id="num-players" onchange="updateTeamFields()">
+        {% for n in num_players_options %}
+        <option value="{{ n }}" {% if n == 12 %}selected{% endif %}>{{ n }} Spieler ({{ n // 2 }} Teams)</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="section">
+      <label>Admin-Passwort</label>
+      <input type="password" name="admin_password" required minlength="4">
+    </div>
+    <div class="section">
+      <h3>Teams</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.25rem">
+        <span style="font-size:.75rem;color:#64748b">Teamname</span>
+        <span style="font-size:.75rem;color:#64748b">Spieler 1</span>
+        <span style="font-size:.75rem;color:#64748b">Spieler 2</span>
+      </div>
+      <div id="team-fields"></div>
+    </div>
+    <button type="submit">Turnier starten 🚀</button>
+  </form>
+  <script>
+    function updateTeamFields(){
+      const n=parseInt(document.getElementById('num-players').value);
+      const container=document.getElementById('team-fields');
+      container.innerHTML='';
+      for(let i=1;i<=n/2;i++){
+        container.innerHTML+=`<div class="team-row">
+          <input type="text" name="team_name_${i}" placeholder="Team ${i}" required>
+          <input type="text" name="player1_${i}" placeholder="Spieler 1" required>
+          <input type="text" name="player2_${i}" placeholder="Spieler 2" required>
+        </div>`;
+      }
+    }
+    updateTeamFields();
+  </script>
+</body>
+</html>

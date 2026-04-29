@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – {{ tournament.title }}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:1rem;background:#0f172a;color:#f1f5f9}
+    h1{color:#f59e0b;font-size:1.2rem;margin:0 0 .5rem}
+    .progress{background:#1e293b;border-radius:8px;height:8px;margin-bottom:1rem}
+    .progress-bar{background:#f59e0b;height:8px;border-radius:8px;transition:width .3s}
+    .progress-label{font-size:.75rem;color:#94a3b8;margin-bottom:.25rem}
+    .match-card{background:#1e293b;border-radius:10px;padding:1rem;margin-bottom:.75rem;cursor:pointer;border:2px solid transparent}
+    .match-card:hover{border-color:#f59e0b}
+    .match-card .vs{text-align:center;color:#64748b;margin:.25rem 0;font-size:.8rem}
+    .match-card .team{font-weight:600;font-size:1rem}
+    .section-title{font-size:.75rem;color:#94a3b8;text-transform:uppercase;margin:1rem 0 .5rem}
+    .standings table{width:100%;border-collapse:collapse;font-size:.85rem}
+    .standings th{color:#94a3b8;text-align:left;padding:.25rem .5rem}
+    .standings td{padding:.25rem .5rem;border-top:1px solid #0f172a}
+    .badge{background:#f59e0b;color:#0f172a;border-radius:4px;padding:0 6px;font-size:.7rem;font-weight:700}
+    .finished-banner{background:#16a34a;text-align:center;border-radius:10px;padding:1.5rem;margin:1rem 0;font-size:1.2rem;font-weight:700}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100}
+    .modal-overlay.open{display:flex;align-items:center;justify-content:center}
+    .modal{background:#1e293b;border-radius:12px;padding:1.5rem;width:90%;max-width:360px}
+    .modal h2{margin-top:0;font-size:1rem;color:#f59e0b}
+    .cup-row{display:flex;align-items:center;gap:.5rem;margin:.5rem 0}
+    .cup-row label{flex:1;font-size:.9rem}
+    .cup-row input{width:60px;padding:.4rem;background:#0f172a;color:#f1f5f9;border:1px solid #334155;border-radius:4px;text-align:center}
+    .btn{background:#f59e0b;color:#0f172a;border:none;padding:.6rem 1rem;border-radius:6px;font-weight:700;cursor:pointer;width:100%;margin-top:.5rem}
+    .btn-cancel{background:#334155;color:#f1f5f9;margin-top:.25rem}
+  </style>
+</head>
+<body>
+  <h1>🍺 {{ tournament.title }}</h1>
+  <div class="progress-label">{{ completed_count }} / {{ total_count }} Spiele</div>
+  <div class="progress"><div class="progress-bar" style="width:{{ (completed_count / total_count * 100)|int if total_count else 0 }}%"></div></div>
+
+  {% if tournament.status.value == 'finished' %}
+    {% set final_match = ko_matches|selectattr('round.value','eq','final')|list|first %}
+    {% if final_match and final_match.winner_id %}
+      <div class="finished-banner">🏆 {{ team_map[final_match.winner_id].name }} gewinnt!</div>
+    {% endif %}
+  {% endif %}
+
+  {% if pending_matches %}
+  <div class="section-title">Nächste Spiele</div>
+  {% for match in pending_matches[:4] %}
+    {% if match.team_a_id and match.team_b_id %}
+    <div class="match-card" onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})">
+      <div class="team">{{ team_map[match.team_a_id].name }}</div>
+      <div class="vs">vs</div>
+      <div class="team">{{ team_map[match.team_b_id].name }}</div>
+      <div style="margin-top:.5rem;font-size:.75rem;color:#64748b">
+        {% if match.round.value=='group' %}Gruppe {{ match.group }}{% elif match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}Finale{% else %}Spiel um Platz 3{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+  {% endif %}
+
+  <div class="section-title">Gruppenstand A</div>
+  <div class="standings"><table>
+    <tr><th>#</th><th>Team</th><th>S</th><th>N</th><th>±</th></tr>
+    {% for s in standings_a %}
+    <tr><td>{{ loop.index }}</td><td>{{ s.name }} {% if loop.index<=2 %}<span class="badge">KO</span>{% endif %}</td><td>{{ s.wins }}</td><td>{{ s.losses }}</td><td>{{ s.cup_diff }}</td></tr>
+    {% endfor %}
+  </table></div>
+
+  <div class="section-title">Gruppenstand B</div>
+  <div class="standings"><table>
+    <tr><th>#</th><th>Team</th><th>S</th><th>N</th><th>±</th></tr>
+    {% for s in standings_b %}
+    <tr><td>{{ loop.index }}</td><td>{{ s.name }} {% if loop.index<=2 %}<span class="badge">KO</span>{% endif %}</td><td>{{ s.wins }}</td><td>{{ s.losses }}</td><td>{{ s.cup_diff }}</td></tr>
+    {% endfor %}
+  </table></div>
+
+  {% if ko_matches %}
+  <div class="section-title">K.O.-Phase</div>
+  {% for match in ko_matches %}
+  <div class="match-card" {% if match.status.value=='pending' and match.team_a_id and match.team_b_id %}onclick="openModal({{ match.id }},'{{ team_map[match.team_a_id].name }}','{{ team_map[match.team_b_id].name }}',{{ match.team_a_id }},{{ match.team_b_id }})"{% endif %}>
+    <div style="font-size:.7rem;color:#64748b;margin-bottom:.25rem">{% if match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}Finale{% else %}Spiel um Platz 3{% endif %}</div>
+    <div class="team">{% if match.team_a_id %}{{ team_map[match.team_a_id].name }}{% else %}TBD{% endif %}</div>
+    <div class="vs">vs</div>
+    <div class="team">{% if match.team_b_id %}{{ team_map[match.team_b_id].name }}{% else %}TBD{% endif %}</div>
+    {% if match.winner_id %}<div style="margin-top:.4rem;font-size:.75rem;color:#16a34a">🏆 {{ team_map[match.winner_id].name }} ({{ match.cups_a }}:{{ match.cups_b }})</div>{% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div style="margin-top:2rem">
+    <a href="/tv" style="color:#64748b;font-size:.8rem">TV-Ansicht →</a>
+    <form method="post" action="/logout" style="display:inline;margin-left:1rem">
+      <button type="submit" style="background:none;border:none;color:#64748b;font-size:.8rem;cursor:pointer">Logout</button>
+    </form>
+  </div>
+
+  <div class="modal-overlay" id="result-modal">
+    <div class="modal">
+      <h2>Ergebnis eintragen</h2>
+      <form method="post" id="result-form">
+        <input type="hidden" name="winner_id" id="modal-winner-id">
+        <div class="cup-row"><label id="modal-team-a-label">Team A</label><input type="number" name="cups_a" id="modal-cups-a" min="0" max="10" value="0" required><span style="color:#64748b">Cups</span></div>
+        <div class="cup-row"><label id="modal-team-b-label">Team B</label><input type="number" name="cups_b" id="modal-cups-b" min="0" max="10" value="0" required><span style="color:#64748b">Cups</span></div>
+        <div style="display:flex;gap:.5rem;margin-top:.75rem">
+          <button type="button" class="btn" style="background:#16a34a" id="btn-win-a"></button>
+          <button type="button" class="btn" style="background:#dc2626" id="btn-win-b"></button>
+        </div>
+        <button type="submit" class="btn" style="margin-top:.5rem">Speichern</button>
+        <button type="button" class="btn btn-cancel" onclick="closeModal()">Abbrechen</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    let cAId,cBId;
+    function openModal(mid,aName,bName,aId,bId){
+      cAId=aId;cBId=bId;
+      document.getElementById('result-form').action='/matches/'+mid+'/result';
+      document.getElementById('modal-team-a-label').textContent=aName;
+      document.getElementById('modal-team-b-label').textContent=bName;
+      document.getElementById('btn-win-a').textContent='🏆 '+aName+' gewinnt';
+      document.getElementById('btn-win-b').textContent='🏆 '+bName+' gewinnt';
+      document.getElementById('modal-winner-id').value='';
+      document.getElementById('result-modal').classList.add('open');
+    }
+    function closeModal(){document.getElementById('result-modal').classList.remove('open')}
+    document.getElementById('btn-win-a').onclick=()=>{document.getElementById('modal-winner-id').value=cAId};
+    document.getElementById('btn-win-b').onclick=()=>{document.getElementById('modal-winner-id').value=cBId};
+    document.getElementById('result-modal').onclick=e=>{if(e.target===e.currentTarget)closeModal()};
+  </script>
+</body>
+</html>

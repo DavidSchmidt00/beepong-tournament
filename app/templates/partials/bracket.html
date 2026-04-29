@@ -1,0 +1,59 @@
+<div id="bracket-content">
+  {% if tournament.status.value == 'finished' %}
+    {% set final_match = ko_matches|selectattr('round.value','eq','final')|list|first %}
+    {% if final_match and final_match.winner_id %}
+    <div style="text-align:center;padding:2rem;background:#16a34a;border-radius:12px;margin-bottom:1.5rem">
+      <div style="font-size:2rem">🏆</div>
+      <div style="font-size:1.5rem;font-weight:700">{{ team_map[final_match.winner_id].name }}</div>
+      <div style="opacity:.8">Turniersieger!</div>
+    </div>
+    {% endif %}
+  {% else %}
+    {% set next = pending_matches|selectattr('team_a_id')|selectattr('team_b_id')|list|first %}
+    {% if next %}
+    <div style="text-align:center;margin-bottom:1.5rem;padding:1.5rem;background:#1e3a5f;border-radius:12px;border:2px solid #f59e0b">
+      <div style="font-size:.8rem;color:#f59e0b;text-transform:uppercase;letter-spacing:2px;margin-bottom:.5rem">Jetzt am Tisch</div>
+      <div style="font-size:1.8rem;font-weight:700">{{ team_map[next.team_a_id].name }}</div>
+      <div style="color:#64748b;margin:.25rem 0">vs</div>
+      <div style="font-size:1.8rem;font-weight:700">{{ team_map[next.team_b_id].name }}</div>
+      <div style="font-size:.85rem;color:#64748b;margin-top:.5rem">
+        {% if next.round.value=='group' %}Gruppe {{ next.group }}{% elif next.round.value=='semifinal' %}Halbfinale{% elif next.round.value=='final' %}🏆 Finale{% else %}Spiel um Platz 3{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+    {% for group_label, standings in [('A', standings_a), ('B', standings_b)] %}
+    <div>
+      <div style="font-size:.7rem;color:#64748b;text-transform:uppercase;margin-bottom:.5rem">Gruppe {{ group_label }}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <tr style="color:#64748b"><th style="text-align:left;padding:2px 4px">#</th><th style="text-align:left">Team</th><th>S</th><th>±</th></tr>
+        {% for s in standings %}
+        <tr style="border-top:1px solid #1e293b">
+          <td style="padding:4px">{{ loop.index }}</td>
+          <td style="padding:4px;font-weight:{{ '600' if loop.index<=2 else '400' }}">{{ s.name }}{% if loop.index<=2 %} <span style="font-size:.65rem;background:#f59e0b;color:#0f172a;border-radius:3px;padding:0 4px">KO</span>{% endif %}</td>
+          <td style="text-align:center">{{ s.wins }}</td>
+          <td style="text-align:center;color:{{ '#4ade80' if s.cup_diff >= 0 else '#f87171' }}">{{ s.cup_diff }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if ko_matches %}
+  <div style="font-size:.7rem;color:#64748b;text-transform:uppercase;margin-bottom:.5rem">K.O.-Phase</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem">
+    {% for match in ko_matches %}
+    <div style="background:#1e293b;border-radius:8px;padding:.75rem">
+      <div style="font-size:.65rem;color:#64748b;margin-bottom:.25rem">{% if match.round.value=='semifinal' %}Halbfinale{% elif match.round.value=='final' %}🏆 Finale{% else %}Platz 3{% endif %}</div>
+      <div style="font-weight:600">{% if match.team_a_id %}{{ team_map[match.team_a_id].name }}{% else %}TBD{% endif %}</div>
+      <div style="color:#64748b;font-size:.75rem;margin:2px 0">vs</div>
+      <div style="font-weight:600">{% if match.team_b_id %}{{ team_map[match.team_b_id].name }}{% else %}TBD{% endif %}</div>
+      {% if match.winner_id %}<div style="margin-top:4px;font-size:.75rem;color:#4ade80">🏆 {{ team_map[match.winner_id].name }} {{ match.cups_a }}:{{ match.cups_b }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

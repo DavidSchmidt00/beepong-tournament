@@ -58,8 +58,8 @@ class Match(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"))
-    team_a_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
-    team_b_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
+    team_a_id: Mapped[int | None] = mapped_column(ForeignKey("teams.id"), nullable=True)
+    team_b_id: Mapped[int | None] = mapped_column(ForeignKey("teams.id"), nullable=True)
     round: Mapped[MatchRound] = mapped_column()
     group: Mapped[str | None] = mapped_column(String(1), nullable=True)
     status: Mapped[MatchStatus] = mapped_column(default=MatchStatus.pending)
@@ -69,6 +69,6 @@ class Match(Base):
     played_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="matches")
-    team_a: Mapped["Team"] = relationship(foreign_keys=[team_a_id], back_populates="matches_as_a")
-    team_b: Mapped["Team"] = relationship(foreign_keys=[team_b_id], back_populates="matches_as_b")
+    team_a: Mapped["Team | None"] = relationship(foreign_keys=[team_a_id], back_populates="matches_as_a")
+    team_b: Mapped["Team | None"] = relationship(foreign_keys=[team_b_id], back_populates="matches_as_b")
     winner: Mapped["Team | None"] = relationship(foreign_keys=[winner_id], back_populates="wins")

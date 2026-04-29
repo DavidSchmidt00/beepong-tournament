@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Login – Beer Pong</title>
+<style>body{font-family:system-ui,sans-serif;max-width:360px;margin:4rem auto;padding:1rem;background:#0f172a;color:#f1f5f9}h1{color:#f59e0b}input{width:100%;padding:.6rem;border:1px solid #334155;border-radius:6px;background:#1e293b;color:#f1f5f9;margin-bottom:.75rem;box-sizing:border-box}button{background:#f59e0b;color:#0f172a;border:none;padding:.75rem 2rem;border-radius:6px;font-size:1rem;font-weight:700;cursor:pointer;width:100%}.error{color:#f87171;margin-bottom:.75rem;font-size:.9rem}</style>
+</head>
+<body>
+<h1>🍺 Beer Pong</h1>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/login">
+  <input type="password" name="password" placeholder="Admin-Passwort" required autofocus>
+  <button type="submit">Einloggen</button>
+</form>
+</body>
+</html>
