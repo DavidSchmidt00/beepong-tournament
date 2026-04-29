@@ -42,31 +42,16 @@ def _run_migrations():
 
 
 def _migrate_teams_nullable_players():
-    """Recreate teams table without NOT NULL on player1/player2, if needed."""
+    """Drop NOT NULL constraint on player1/player2 in teams table, if still present."""
     import sqlalchemy as sa
     with engine.connect() as conn:
-        rows = conn.execute(sa.text("PRAGMA table_info(teams)")).fetchall()
-        player1_row = next((r for r in rows if r[1] == "player1"), None)
-        if player1_row is None or player1_row[3] == 0:
-            return  # already nullable or doesn't exist
+        row = conn.execute(sa.text("""
+            SELECT is_nullable FROM information_schema.columns
+            WHERE table_name = 'teams' AND column_name = 'player1'
+        """)).fetchone()
+        if row is None or row[0] == 'YES':
+            return  # column already nullable or doesn't exist
 
-        conn.execute(sa.text("PRAGMA foreign_keys=OFF"))
-        conn.execute(sa.text("""
-            CREATE TABLE IF NOT EXISTS teams_new (
-                id INTEGER NOT NULL PRIMARY KEY,
-                tournament_id INTEGER REFERENCES tournaments(id),
-                name VARCHAR(50),
-                emoji VARCHAR(10) DEFAULT '🍺',
-                player1 VARCHAR(50),
-                player2 VARCHAR(50),
-                "group" VARCHAR(1)
-            )
-        """))
-        conn.execute(sa.text("""
-            INSERT INTO teams_new (id, tournament_id, name, emoji, player1, player2, "group")
-            SELECT id, tournament_id, name, emoji, player1, player2, "group" FROM teams
-        """))
-        conn.execute(sa.text("DROP TABLE teams"))
-        conn.execute(sa.text("ALTER TABLE teams_new RENAME TO teams"))
-        conn.execute(sa.text("PRAGMA foreign_keys=ON"))
+        conn.execute(sa.text("ALTER TABLE teams ALTER COLUMN player1 DROP NOT NULL"))
+        conn.execute(sa.text("ALTER TABLE teams ALTER COLUMN player2 DROP NOT NULL"))
         conn.commit()
