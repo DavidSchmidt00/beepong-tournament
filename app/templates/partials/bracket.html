@@ -268,7 +268,7 @@
           {% endif %}
         </div>
         <div class="bracket-match"
-             style="min-width:240px; border: 1px dashed rgba(255,255,255,0.15); border-radius: var(--radius-md); background: rgba(255,255,255,0.02); {% if next and third.id == next.id %}border: 2px solid #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);{% endif %}">
+             style="border: 1px dashed rgba(255,255,255,0.15); border-radius: var(--radius-md); background: rgba(255,255,255,0.02); {% if next and third.id == next.id %}border: 2px solid #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);{% endif %}">
           <div class="bracket-team {{ 'winner' if (third.winner_id and third.winner_id == third.team_a_id) else 'loser' if third.winner_id else '' }}">
             {% if third.team_a_id %}<span>{{ team_map[third.team_a_id].emoji }} {{ team_map[third.team_a_id].name }}</span>{% else %}<span style="color:var(--text-muted);">Offen</span>{% endif %}
             <span class="bracket-score">{{ third.cups_a if third.cups_a is not none else '-' }}</span>

@@ -72,7 +72,12 @@
     .section-title { margin: 0.5rem 0; font-size: 0.85rem; }
     .bracket-match { padding: clamp(0.6rem, 1.2vh, 1rem) clamp(0.75rem, 1.8vw, 1.5rem); position: relative; z-index: 2; min-width: clamp(220px, 27vw, 400px); }
     .bracket-team { padding: clamp(0.35rem, 0.8vh, 0.6rem) 0; font-size: clamp(1.1rem, 2.2vw, 2.2rem); }
-    .bracket-score { font-size: clamp(1.2rem, 2.2vw, 2.2rem); min-width: clamp(28px, 3vw, 48px); }
+    .bracket-team > span:first-child {
+      flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-right: 0.5rem;
+    }
+    .bracket-score { font-size: clamp(1.2rem, 2.2vw, 2.2rem); min-width: clamp(28px, 3vw, 48px); flex-shrink: 0; }
 
     /* Winner/loser highlighting in bracket */
     .bracket-team.winner {
