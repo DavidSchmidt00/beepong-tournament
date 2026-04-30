@@ -235,24 +235,24 @@
         </div>
       </div>
 
-      <!-- Platz 3 (Dezent in der Ecke) -->
+      <!-- Platz 3 -->
       {% if third %}
-      <div style="position: absolute; bottom: 0.5rem; right: 0.5rem; opacity: 0.8;">
-        <div class="bracket-match glass-panel"
-             style="padding: 0.3rem 0.6rem; min-width: 140px; border:none; background: rgba(255,255,255,0.03); {% if next and third.id == next.id %}border: 2px solid #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); opacity: 1;{% endif %}">
-          <div class="meta" style="font-size:0.5rem; text-align:center; margin-bottom:0.2rem; display:flex; justify-content:center; align-items:center; gap:0.3rem;">
-            Platz 3
-            {% if next and third.id == next.id %}
-            <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.4rem; padding: 0.05rem 0.2rem; animation: pulse 1.5s infinite;">LIVE</span>
-            {% endif %}
-          </div>
-          <div class="bracket-team {{ 'winner' if third.winner_id == third.team_a_id else '' }}" style="font-size: 0.7rem; padding: 0.1rem 0;">
+      <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:0.35rem; padding:0.4rem 0 0.1rem; opacity:{% if next and third.id == next.id %}1{% else %}0.7{% endif %}; transition: opacity 0.3s;">
+        <div style="font-size:0.55rem; text-transform:uppercase; letter-spacing:2.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
+          🥉 Spiel um Platz 3
+          {% if next and third.id == next.id %}
+          <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.45rem; animation: pulse 1.5s infinite;">LIVE</span>
+          {% endif %}
+        </div>
+        <div class="bracket-match"
+             style="min-width:240px; border: 1px dashed rgba(255,255,255,0.15); border-radius: var(--radius-md); background: rgba(255,255,255,0.02); {% if next and third.id == next.id %}border: 2px solid #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);{% endif %}">
+          <div class="bracket-team {{ 'winner' if third.winner_id == third.team_a_id else '' }}">
             {% if third.team_a_id %}<span>{{ team_map[third.team_a_id].emoji }} {{ team_map[third.team_a_id].name }}</span>{% else %}<span style="color:var(--text-muted);">Offen</span>{% endif %}
-            <span class="bracket-score" style="font-size: 0.75rem; min-width: auto;">{{ third.cups_a if third.cups_a is not none else '-' }}</span>
+            <span class="bracket-score">{{ third.cups_a if third.cups_a is not none else '-' }}</span>
           </div>
-          <div class="bracket-team {{ 'winner' if third.winner_id == third.team_b_id else '' }}" style="border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.7rem; padding: 0.1rem 0;">
+          <div class="bracket-team {{ 'winner' if third.winner_id == third.team_b_id else '' }}" style="border-top:1px solid rgba(255,255,255,0.05);">
             {% if third.team_b_id %}<span>{{ team_map[third.team_b_id].emoji }} {{ team_map[third.team_b_id].name }}</span>{% else %}<span style="color:var(--text-muted);">Offen</span>{% endif %}
-            <span class="bracket-score" style="font-size: 0.75rem; min-width: auto;">{{ third.cups_b if third.cups_b is not none else '-' }}</span>
+            <span class="bracket-score">{{ third.cups_b if third.cups_b is not none else '-' }}</span>
           </div>
         </div>
       </div>
