@@ -70,14 +70,15 @@
     .standings td, .standings th { padding: 0.9rem 0.75rem; font-size: 1.05rem; }
     .standings th { font-size: 0.8rem; }
     .section-title { margin: 0.5rem 0; font-size: 0.85rem; }
-    .bracket-match { padding: clamp(0.6rem, 1.2vh, 1rem) clamp(0.75rem, 1.5vw, 1.25rem); position: relative; z-index: 2; min-width: clamp(180px, 22vw, 320px); }
-    .bracket-team { padding: clamp(0.35rem, 0.8vh, 0.6rem) 0; font-size: clamp(1rem, 1.8vw, 1.8rem); }
-    .bracket-score { font-size: clamp(1.1rem, 1.9vw, 1.9rem); min-width: clamp(24px, 2.5vw, 40px); }
+    .bracket-match { padding: clamp(0.6rem, 1.2vh, 1rem) clamp(0.75rem, 1.8vw, 1.5rem); position: relative; z-index: 2; min-width: clamp(220px, 27vw, 400px); }
+    .bracket-team { padding: clamp(0.35rem, 0.8vh, 0.6rem) 0; font-size: clamp(1.1rem, 2.2vw, 2.2rem); }
+    .bracket-score { font-size: clamp(1.2rem, 2.2vw, 2.2rem); min-width: clamp(28px, 3vw, 48px); }
 
     /* Winner/loser highlighting in bracket */
     .bracket-team.winner {
       border-left: 3px solid var(--success);
       padding-left: 0.35rem;
+      padding-right: 0.35rem;
       background: rgba(16, 185, 129, 0.07);
       border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
