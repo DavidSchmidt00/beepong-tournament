@@ -28,18 +28,19 @@
     .tv-slide {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
-      opacity: 0; transition: opacity 0.5s ease;
+      opacity: 0; transform: scale(0.97);
+      transition: opacity 0.45s ease, transform 0.45s ease;
       pointer-events: none; overflow: hidden;
       padding: 0.5rem 0;
     }
-    
+
     /* State-based visibility using parent classes to avoid HTMX flickering */
-    #live-bracket.active-0 .tv-slide:nth-of-type(1) { opacity: 1; pointer-events: auto; }
-    #live-bracket.active-1 .tv-slide:nth-of-type(2) { opacity: 1; pointer-events: auto; }
-    #live-bracket.active-2 .tv-slide:nth-of-type(3) { opacity: 1; pointer-events: auto; }
-    #live-bracket.active-3 .tv-slide:nth-of-type(4) { opacity: 1; pointer-events: auto; }
-    #live-bracket.active-4 .tv-slide:nth-of-type(5) { opacity: 1; pointer-events: auto; }
-    #live-bracket.active-5 .tv-slide:nth-of-type(6) { opacity: 1; pointer-events: auto; }
+    #live-bracket.active-0 .tv-slide:nth-of-type(1) { opacity: 1; pointer-events: auto; transform: scale(1); }
+    #live-bracket.active-1 .tv-slide:nth-of-type(2) { opacity: 1; pointer-events: auto; transform: scale(1); }
+    #live-bracket.active-2 .tv-slide:nth-of-type(3) { opacity: 1; pointer-events: auto; transform: scale(1); }
+    #live-bracket.active-3 .tv-slide:nth-of-type(4) { opacity: 1; pointer-events: auto; transform: scale(1); }
+    #live-bracket.active-4 .tv-slide:nth-of-type(5) { opacity: 1; pointer-events: auto; transform: scale(1); }
+    #live-bracket.active-5 .tv-slide:nth-of-type(6) { opacity: 1; pointer-events: auto; transform: scale(1); }
 
     /* Slide nav dots */
     #slide-nav {
@@ -65,12 +66,22 @@
       transition: width 0.1s linear;
     }
 
-    /* Compact table overrides */
-    .standings td, .standings th { padding: 0.75rem 0.5rem; font-size: 0.9rem; }
-    .section-title { margin: 0.5rem 0; font-size: 0.8rem; }
+    /* TV table overrides */
+    .standings td, .standings th { padding: 0.9rem 0.75rem; font-size: 1.05rem; }
+    .standings th { font-size: 0.8rem; }
+    .section-title { margin: 0.5rem 0; font-size: 0.85rem; }
     .bracket-match { padding: 0.75rem 1rem; position: relative; z-index: 2; min-width: 200px; }
     .bracket-team { padding: 0.4rem 0; font-size: 1.1rem; }
     .bracket-score { font-size: 1.2rem; min-width: 25px; }
+
+    /* Winner/loser highlighting in bracket */
+    .bracket-team.winner {
+      border-left: 3px solid var(--success);
+      padding-left: 0.35rem;
+      background: rgba(16, 185, 129, 0.07);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    .bracket-team.loser { opacity: 0.38; }
     
     /* Bracket Connectors */
     .bracket-container {
@@ -93,11 +104,12 @@
 
     .mini-chip {
       flex-shrink: 0; text-align: center;
-      padding: 0.4rem 1rem; margin-bottom: 0.5rem;
-      background: rgba(245,158,11,0.08);
-      border: 1px solid rgba(245,158,11,0.2);
-      border-radius: 999px; font-size: 0.8rem;
+      padding: 0.55rem 1.5rem; margin-bottom: 0.75rem;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 999px; font-size: 1rem;
       color: var(--text-muted); align-self: center;
+      box-shadow: 0 0 12px rgba(245,158,11,0.08);
     }
     .mini-chip strong { color: var(--primary); }
 
