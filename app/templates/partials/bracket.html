@@ -96,7 +96,9 @@
       {% if next %}
       <div class="mini-chip">🎯 Jetzt: <strong>{{ team_map[next.team_a_id].emoji }} {{ team_map[next.team_a_id].name }}</strong> vs <strong>{{ team_map[next.team_b_id].emoji }} {{ team_map[next.team_b_id].name }}</strong></div>
       {% endif %}
-      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">Gruppenphase</div>
+      <div style="text-align:center;margin-bottom:1rem;flex-shrink:0;">
+        <span style="font-size:1.4rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:5px;">Gruppenphase</span>
+      </div>
       <div class="grid-2" style="flex:1;min-height:0;align-items:start; {% if group_phase_done %}opacity:0.6;{% endif %}">
         {% for group_label, standings in active_group_standings %}
         <div>
@@ -142,7 +144,9 @@
       {% if next %}
       <div class="mini-chip">🎯 Jetzt: <strong>{{ team_map[next.team_a_id].emoji }} {{ team_map[next.team_a_id].name }}</strong> vs <strong>{{ team_map[next.team_b_id].emoji }} {{ team_map[next.team_b_id].name }}</strong></div>
       {% endif %}
-      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">K.O.-Phase</div>
+      <div style="text-align:center;margin-bottom:1rem;flex-shrink:0;">
+        <span style="font-size:1.4rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:5px;">K.O.-Phase</span>
+      </div>
       
       {% set quarters = ko_matches|selectattr('round.value','eq','quarterfinal')|list %}
       {% set semis = ko_matches|selectattr('round.value','eq','semifinal')|list %}
@@ -156,7 +160,7 @@
           {% for m in quarters %}
           <div class="bracket-match glass-panel"
                style="{% if next and m.id == next.id %}border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-width: 2px;{% endif %}">
-            <div class="meta" style="font-size:0.6rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+            <div class="meta" style="font-size:0.75rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
               VF {{ loop.index }}
               {% if next and m.id == next.id %}
               <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -185,7 +189,7 @@
           {% for m in semis %}
           <div class="bracket-match glass-panel"
                style="{% if next and m.id == next.id %}border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-width: 2px;{% endif %}">
-            <div class="meta" style="font-size:0.6rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+            <div class="meta" style="font-size:0.75rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
               Halbfinale {{ loop.index }}
               {% if next and m.id == next.id %}
               <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -215,7 +219,7 @@
           {% if final %}
           <div class="bracket-match glass-panel"
                style="border-color:var(--primary); {% if next and final.id == next.id %}box-shadow: 0 0 30px rgba(245,158,11,0.6); border-width: 2px;{% else %}box-shadow: 0 0 15px rgba(245,158,11,0.2);{% endif %}">
-            <div class="meta" style="font-size:0.65rem;text-align:center;color:var(--primary);margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+            <div class="meta" style="font-size:0.8rem;text-align:center;color:var(--primary);margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
               🏆 Finale
               {% if next and final.id == next.id %}
               <span class="badge" style="background: var(--primary); color: #000; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -237,7 +241,7 @@
       <!-- Platz 3 -->
       {% if third %}
       <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:0.35rem; padding:0.4rem 0 0.1rem; opacity:{% if next and third.id == next.id %}1{% else %}0.7{% endif %}; transition: opacity 0.3s;">
-        <div style="font-size:0.55rem; text-transform:uppercase; letter-spacing:2.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
+        <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:2.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
           🥉 Spiel um Platz 3
           {% if next and third.id == next.id %}
           <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.45rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -262,7 +266,9 @@
     {# SLIDE 4: Gesamtranking – nur wenn Turnier abgeschlossen #}
     {% if tournament.status.value == 'finished' %}
     <div class="tv-slide" id="slide-ranking">
-      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:3px;color:var(--text-muted);text-align:center;margin-bottom:0.75rem;">Gesamtranking</div>
+      <div style="text-align:center;margin-bottom:1rem;flex-shrink:0;">
+        <span style="font-size:1.4rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:5px;">Gesamtranking</span>
+      </div>
       <div style="flex:1; width: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; justify-content: center;">
         {% for r in overall_ranking %}
         <div class="glass-panel" style="display: flex; align-items: center; padding: 0.5rem 1rem; gap: 1rem; {% if r.rank <= 3 %}border-left: 4px solid var(--primary); background: rgba(245,158,11,0.05);{% endif %}">
