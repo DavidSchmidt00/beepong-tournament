@@ -73,12 +73,16 @@
           </div>
         </div>
         {% if upcoming %}
-        <div style="flex-shrink:0;text-align:center;padding:0.75rem 2rem;background:rgba(255,255,255,0.04);border-top:1px solid rgba(255,255,255,0.06);font-size:1rem;">
-          <span style="font-size:0.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-right:1rem;">⏭ Nächstes Spiel</span>
-          <strong>{{ team_map[upcoming.team_a_id].emoji }} {{ team_map[upcoming.team_a_id].name }}</strong>
-          <span style="color:var(--text-muted);margin:0 0.5rem;">vs</span>
-          <strong>{{ team_map[upcoming.team_b_id].emoji }} {{ team_map[upcoming.team_b_id].name }}</strong>
-          <span style="font-size:0.7rem;color:var(--text-muted);margin-left:1rem;">{% if upcoming.round.value=='group' %}Gruppe {{ upcoming.group }}{% elif upcoming.round.value=='quarterfinal' %}Viertelfinale{% elif upcoming.round.value=='semifinal' %}Halbfinale{% else %}Platz 3{% endif %}</span>
+        {% set up_round = 'Gruppe ' + upcoming.group if upcoming.round.value == 'group' else 'VF' if upcoming.round.value == 'quarterfinal' else 'HF' if upcoming.round.value == 'semifinal' else 'Platz 3' %}
+        <div style="flex-shrink:0; display:flex; justify-content:center; padding:0.6rem 0 0.25rem;">
+          <div style="display:inline-flex; align-items:center; gap:0.65rem; padding:0.45rem 1.1rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:999px; font-size:0.9rem; white-space:nowrap; max-width:90vw; overflow:hidden;">
+            <span style="font-size:0.55rem; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); flex-shrink:0;">⏭ Nächstes</span>
+            <span style="width:1px; height:14px; background:rgba(255,255,255,0.12); display:inline-block; flex-shrink:0;"></span>
+            <strong style="overflow:hidden; text-overflow:ellipsis;">{{ team_map[upcoming.team_a_id].emoji }} {{ team_map[upcoming.team_a_id].name }}</strong>
+            <span style="color:var(--text-muted); flex-shrink:0;">vs</span>
+            <strong style="overflow:hidden; text-overflow:ellipsis;">{{ team_map[upcoming.team_b_id].emoji }} {{ team_map[upcoming.team_b_id].name }}</strong>
+            <span style="font-size:0.65rem; color:var(--text-muted); padding:0.1rem 0.45rem; background:rgba(255,255,255,0.07); border-radius:4px; flex-shrink:0;">{{ up_round }}</span>
+          </div>
         </div>
         {% endif %}
         {% else %}

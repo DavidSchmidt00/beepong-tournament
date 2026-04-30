@@ -84,8 +84,8 @@
       position: absolute; border: 1px solid rgba(255,255,255,0.15);
       border-left: none; width: 50%; height: 50%;
     }
-    .connector-line.top { top: 25%; border-bottom: none; border-top-right-radius: 8px; }
-    .connector-line.bottom { bottom: 25%; border-top: none; border-bottom-right-radius: 8px; }
+    .connector-line.top { top: 25%; border-bottom: none; border-top-right-radius: 14px; }
+    .connector-line.bottom { bottom: 25%; border-top: none; border-bottom-right-radius: 14px; }
     .connector-to-final {
       position: absolute; top: 50%; right: 0; width: 50%;
       border-top: 1px solid rgba(255,255,255,0.15);
@@ -225,10 +225,41 @@
     }, TICK_INTERVAL);
 
     updateSlideshowUI();
+    fixBracketConnectors();
+
+    // ── Bracket Connector alignment ────────────────────────────
+    function fixBracketConnectors() {
+      document.querySelectorAll('.bracket-container .connector-col').forEach(connCol => {
+        const leftCol = connCol.previousElementSibling;
+        if (!leftCol || !leftCol.classList.contains('bracket-col')) return;
+        const matches = Array.from(leftCol.querySelectorAll('.bracket-match'));
+        if (matches.length < 2) return;
+
+        const connRect = connCol.getBoundingClientRect();
+        const m1Rect = matches[0].getBoundingClientRect();
+        const m2Rect = matches[matches.length - 1].getBoundingClientRect();
+
+        const center1 = (m1Rect.top + m1Rect.bottom) / 2 - connRect.top;
+        const center2 = (m2Rect.top + m2Rect.bottom) / 2 - connRect.top;
+        const midpoint = (center1 + center2) / 2;
+        const halfDist = (center2 - center1) / 2;
+
+        const topLine = connCol.querySelector('.connector-line.top');
+        const bottomLine = connCol.querySelector('.connector-line.bottom');
+        const toFinal = connCol.querySelector('.connector-to-final');
+
+        if (topLine) { topLine.style.top = center1 + 'px'; topLine.style.height = halfDist + 'px'; topLine.style.bottom = 'auto'; }
+        if (bottomLine) { bottomLine.style.top = midpoint + 'px'; bottomLine.style.height = halfDist + 'px'; bottomLine.style.bottom = 'auto'; }
+        if (toFinal) { toFinal.style.top = midpoint + 'px'; }
+      });
+    }
+
+    window.addEventListener('resize', fixBracketConnectors);
 
     bracketEl.addEventListener('htmx:afterSwap', () => {
       checkNewMatches();
       updateSlideshowUI();
+      fixBracketConnectors();
     });
 
     // ── Winner detection & overlay ─────────────────────────────
