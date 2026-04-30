@@ -34,10 +34,10 @@
       {% set final_match = ko_matches|selectattr('round.value','eq','final')|list|first %}
       <div class="tv-slide" id="slide-winner">
         {% if final_match and final_match.winner_id %}
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-          <div style="font-size:5rem;">🏆</div>
-          <div style="font-size:3.5rem;font-weight:700;color:var(--primary);margin:1rem 0;">{{ team_map[final_match.winner_id].emoji }} {{ team_map[final_match.winner_id].name }}</div>
-          <div style="font-size:1.2rem;color:var(--text-muted);">ist der Turniersieger!</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:clamp(0.75rem, 2vh, 2rem);">
+          <div style="font-size:clamp(4rem, 10vw, 10rem);line-height:1;">🏆</div>
+          <div style="font-size:clamp(2.5rem, 8vw, 8rem);font-weight:700;color:var(--primary);line-height:1.1;text-shadow:0 0 60px var(--primary-glow);">{{ team_map[final_match.winner_id].emoji }} {{ team_map[final_match.winner_id].name }}</div>
+          <div style="font-size:clamp(1.1rem, 2vw, 2rem);color:var(--text-muted);letter-spacing:3px;text-transform:uppercase;">ist der Turniersieger!</div>
         </div>
 
         {% endif %}
