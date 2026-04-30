@@ -54,9 +54,9 @@
             {% if next.round.value == 'final' %}
               <div style="font-size:1.5rem; color:var(--primary); font-weight:800; letter-spacing:5px; text-transform:uppercase; text-shadow: 0 0 20px rgba(245,158,11,0.4);">🏆 DAS FINALE 🏆</div>
             {% elif next.round.value == 'semifinal' %}
-              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">HF</div>
+              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">Halbfinale</div>
             {% elif next.round.value == 'quarterfinal' %}
-              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">VF</div>
+              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">Viertelfinale</div>
             {% elif next.round.value == 'third_place' %}
               <div style="font-size:0.9rem; color:var(--text-muted); font-weight:700; letter-spacing:3px; text-transform:uppercase;">SPIEL UM PLATZ 3</div>
             {% else %}
@@ -73,7 +73,7 @@
           </div>
 
           {% if upcoming %}
-          {% set up_round = 'Gr. ' + upcoming.group if upcoming.round.value == 'group' else 'VF' if upcoming.round.value == 'quarterfinal' else 'HF' if upcoming.round.value == 'semifinal' else 'Finale' if upcoming.round.value == 'final' else 'Pl. 3' %}
+          {% set up_round = 'Gruppe ' + upcoming.group if upcoming.round.value == 'group' else 'Viertelfinale' if upcoming.round.value == 'quarterfinal' else 'Halbfinale' if upcoming.round.value == 'semifinal' else 'Finale' if upcoming.round.value == 'final' else 'Platz 3' %}
           <div style="display:inline-flex; align-items:center; gap:0.65rem; padding:0.45rem 1.1rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:999px; font-size:0.9rem; white-space:nowrap; max-width:90vw; overflow:hidden;">
             <span style="font-size:0.55rem; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); flex-shrink:0;">⏭ Nächstes</span>
             <span style="width:1px; height:14px; background:rgba(255,255,255,0.12); display:inline-block; flex-shrink:0;"></span>
