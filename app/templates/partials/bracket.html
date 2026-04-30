@@ -49,21 +49,21 @@
 
       <div class="tv-slide" id="slide-now">
         {% if next %}
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:0.5rem;">
-          <div style="margin-bottom:1.5rem;">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1.25rem;">
+          <div>
             {% if next.round.value == 'final' %}
-              <div style="font-size:1.5rem; color:var(--primary); font-weight:800; letter-spacing:5px; text-transform:uppercase; text-shadow: 0 0 20px rgba(245,158,11,0.4); margin-bottom:0.5rem;">🏆 DAS FINALE 🏆</div>
+              <div style="font-size:1.5rem; color:var(--primary); font-weight:800; letter-spacing:5px; text-transform:uppercase; text-shadow: 0 0 20px rgba(245,158,11,0.4);">🏆 DAS FINALE 🏆</div>
             {% elif next.round.value == 'semifinal' %}
-              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">HALBFINALE</div>
+              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">HF</div>
             {% elif next.round.value == 'quarterfinal' %}
-              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">VIERTELFINALE</div>
+              <div style="font-size:1rem; color:var(--secondary); font-weight:700; letter-spacing:4px; text-transform:uppercase; border: 1px solid rgba(255,255,255,0.1); padding: 0.3rem 1.5rem; border-radius: 99px; background: rgba(255,255,255,0.03); display:inline-block;">VF</div>
             {% elif next.round.value == 'third_place' %}
               <div style="font-size:0.9rem; color:var(--text-muted); font-weight:700; letter-spacing:3px; text-transform:uppercase;">SPIEL UM PLATZ 3</div>
             {% else %}
               <div style="font-size:0.7rem; letter-spacing:3px; text-transform:uppercase; color:var(--text-muted);">🎯 Jetzt am Tisch &nbsp;·&nbsp; Gruppe {{ next.group }}</div>
             {% endif %}
           </div>
-          
+
           <div style="display:flex;align-items:center;gap:3rem;">
             {% set ta = team_map[next.team_a_id] %}
             <div style="font-size:3.5rem;font-weight:700;color:var(--primary);text-align:right;">{{ ta.emoji }}<br>{{ ta.name }}{% if ta.player1 or ta.player2 %}<div style="font-size:0.9rem;color:var(--text-muted);font-weight:400;margin-top:0.3rem;">{{ ta.player1 }}{% if ta.player1 and ta.player2 %} &amp; {% endif %}{{ ta.player2 }}</div>{% endif %}</div>
@@ -71,10 +71,9 @@
             {% set tb = team_map[next.team_b_id] %}
             <div style="font-size:3.5rem;font-weight:700;color:var(--primary);text-align:left;">{{ tb.emoji }}<br>{{ tb.name }}{% if tb.player1 or tb.player2 %}<div style="font-size:0.9rem;color:var(--text-muted);font-weight:400;margin-top:0.3rem;">{{ tb.player1 }}{% if tb.player1 and tb.player2 %} &amp; {% endif %}{{ tb.player2 }}</div>{% endif %}</div>
           </div>
-        </div>
-        {% if upcoming %}
-        {% set up_round = 'Gruppe ' + upcoming.group if upcoming.round.value == 'group' else 'VF' if upcoming.round.value == 'quarterfinal' else 'HF' if upcoming.round.value == 'semifinal' else 'Platz 3' %}
-        <div style="flex-shrink:0; display:flex; justify-content:center; padding:0.6rem 0 0.25rem;">
+
+          {% if upcoming %}
+          {% set up_round = 'Gr. ' + upcoming.group if upcoming.round.value == 'group' else 'VF' if upcoming.round.value == 'quarterfinal' else 'HF' if upcoming.round.value == 'semifinal' else 'Finale' if upcoming.round.value == 'final' else 'Pl. 3' %}
           <div style="display:inline-flex; align-items:center; gap:0.65rem; padding:0.45rem 1.1rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:999px; font-size:0.9rem; white-space:nowrap; max-width:90vw; overflow:hidden;">
             <span style="font-size:0.55rem; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); flex-shrink:0;">⏭ Nächstes</span>
             <span style="width:1px; height:14px; background:rgba(255,255,255,0.12); display:inline-block; flex-shrink:0;"></span>
@@ -83,8 +82,8 @@
             <strong style="overflow:hidden; text-overflow:ellipsis;">{{ team_map[upcoming.team_b_id].emoji }} {{ team_map[upcoming.team_b_id].name }}</strong>
             <span style="font-size:0.65rem; color:var(--text-muted); padding:0.1rem 0.45rem; background:rgba(255,255,255,0.07); border-radius:4px; flex-shrink:0;">{{ up_round }}</span>
           </div>
+          {% endif %}
         </div>
-        {% endif %}
         {% else %}
         <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:1.5rem;">Alle Spiele abgeschlossen 🎉</div>
         {% endif %}
