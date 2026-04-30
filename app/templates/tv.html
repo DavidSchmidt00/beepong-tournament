@@ -228,6 +228,8 @@
     fixBracketConnectors();
 
     // ── Bracket Connector alignment ────────────────────────────
+    // Uses offsetTop/offsetHeight (layout space) instead of getBoundingClientRect
+    // so transform: scale() on the container does not skew the values.
     function fixBracketConnectors() {
       document.querySelectorAll('.bracket-container .connector-col').forEach(connCol => {
         const leftCol = connCol.previousElementSibling;
@@ -235,12 +237,14 @@
         const matches = Array.from(leftCol.querySelectorAll('.bracket-match'));
         if (matches.length < 2) return;
 
-        const connRect = connCol.getBoundingClientRect();
-        const m1Rect = matches[0].getBoundingClientRect();
-        const m2Rect = matches[matches.length - 1].getBoundingClientRect();
+        // connector-col stretches to full row height; leftCol is vertically
+        // centered within that row (align-items: center on bracket-container).
+        const connHeight = connCol.offsetHeight;
+        const leftColHeight = leftCol.offsetHeight;
+        const topOffset = (connHeight - leftColHeight) / 2;
 
-        const center1 = (m1Rect.top + m1Rect.bottom) / 2 - connRect.top;
-        const center2 = (m2Rect.top + m2Rect.bottom) / 2 - connRect.top;
+        const center1 = topOffset + matches[0].offsetTop + matches[0].offsetHeight / 2;
+        const center2 = topOffset + matches[matches.length - 1].offsetTop + matches[matches.length - 1].offsetHeight / 2;
         const midpoint = (center1 + center2) / 2;
         const halfDist = (center2 - center1) / 2;
 
