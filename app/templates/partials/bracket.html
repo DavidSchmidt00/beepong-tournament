@@ -180,7 +180,7 @@
           {% for m in quarters %}
           <div class="bracket-match glass-panel"
                style="{% if next and m.id == next.id %}border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-width: 2px;{% endif %}">
-            <div class="meta" style="font-size:0.75rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+            <div class="meta" style="font-size:clamp(0.7rem, 1.1vw, 1.1rem);text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
               VF {{ loop.index }}
               {% if next and m.id == next.id %}
               <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -209,7 +209,7 @@
           {% for m in semis %}
           <div class="bracket-match glass-panel"
                style="{% if next and m.id == next.id %}border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); border-width: 2px;{% endif %}">
-            <div class="meta" style="font-size:0.75rem;text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+            <div class="meta" style="font-size:clamp(0.7rem, 1.1vw, 1.1rem);text-align:center;margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
               Halbfinale {{ loop.index }}
               {% if next and m.id == next.id %}
               <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -239,7 +239,7 @@
           {% if final %}
           <div class="bracket-match glass-panel"
                style="border-color:var(--primary); {% if next and final.id == next.id %}box-shadow: 0 0 30px rgba(245,158,11,0.6); border-width: 2px;{% else %}box-shadow: 0 0 15px rgba(245,158,11,0.2);{% endif %}">
-            <div class="meta" style="font-size:0.8rem;text-align:center;color:var(--primary);margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
+            <div class="meta" style="font-size:clamp(0.75rem, 1.2vw, 1.2rem);text-align:center;color:var(--primary);margin-bottom:0.3rem; display:flex; justify-content:center; align-items:center; gap:0.4rem;">
               🏆 Finale
               {% if next and final.id == next.id %}
               <span class="badge" style="background: var(--primary); color: #000; font-size: 0.5rem; padding: 0.1rem 0.3rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -261,7 +261,7 @@
       <!-- Platz 3 -->
       {% if third %}
       <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:0.35rem; padding:0.4rem 0 0.1rem; opacity:{% if next and third.id == next.id %}1{% else %}0.7{% endif %}; transition: opacity 0.3s;">
-        <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:2.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
+        <div style="font-size:clamp(0.75rem, 1.1vw, 1.1rem); text-transform:uppercase; letter-spacing:2.5px; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
           🥉 Spiel um Platz 3
           {% if next and third.id == next.id %}
           <span class="badge" style="background: #3b82f6; color: #fff; font-size: 0.45rem; animation: pulse 1.5s infinite;">LIVE</span>
@@ -290,16 +290,16 @@
         <div style="font-size:1.4rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:5px;">Gesamtranking</div>
         <div style="margin:0.4rem auto 0;width:3rem;height:2px;background:var(--primary);border-radius:99px;opacity:0.7;"></div>
       </div>
-      <div style="flex:1; width: 100%; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.4rem; min-height: 0; justify-content: center;">
+      <div style="flex:1; width: 100%; max-width: clamp(500px, 60vw, 1000px); margin: 0 auto; display: flex; flex-direction: column; gap: clamp(0.3rem, 0.8vh, 0.7rem); min-height: 0; justify-content: center;">
         {% for r in overall_ranking %}
-        <div class="glass-panel" style="display: flex; align-items: center; padding: 0.7rem 1.25rem; gap: 1.25rem; {% if r.rank <= 3 %}border-left: 4px solid var(--primary); background: rgba(245,158,11,0.05);{% endif %}">
-          <div style="font-size: 1.4rem; font-weight: 800; color: var(--text-muted); min-width: 42px;">#{{ r.rank }}</div>
-          <div style="font-size: 1.6rem; line-height: 1;">{{ r.team_emoji }}</div>
+        <div class="glass-panel" style="display: flex; align-items: center; padding: clamp(0.55rem, 1.2vh, 1rem) clamp(1rem, 2vw, 1.75rem); gap: clamp(0.75rem, 2vw, 1.5rem); {% if r.rank <= 3 %}border-left: 4px solid var(--primary); background: rgba(245,158,11,0.05);{% endif %}">
+          <div style="font-size: clamp(1.2rem, 2.2vw, 2.2rem); font-weight: 800; color: var(--text-muted); min-width: clamp(36px, 4vw, 56px);">#{{ r.rank }}</div>
+          <div style="font-size: clamp(1.4rem, 2.5vw, 2.5rem); line-height: 1;">{{ r.team_emoji }}</div>
           <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 1.2rem;">{{ r.team_name }}</div>
-            {% if r.team_players %}<div style="font-size: 0.85rem; color: var(--text-muted);">{{ r.team_players }}</div>{% endif %}
+            <div style="font-weight: 700; font-size: clamp(1.1rem, 2vw, 2rem);">{{ r.team_name }}</div>
+            {% if r.team_players %}<div style="font-size: clamp(0.8rem, 1.2vw, 1.2rem); color: var(--text-muted);">{{ r.team_players }}</div>{% endif %}
           </div>
-          <div style="font-weight: 700; color: var(--primary); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">{{ r.status }}</div>
+          <div style="font-weight: 700; color: var(--primary); font-size: clamp(0.85rem, 1.3vw, 1.3rem); text-transform: uppercase; letter-spacing: 1px;">{{ r.status }}</div>
         </div>
         {% else %}
         <div style="text-align:center; color:var(--text-muted); margin-top:2rem;">Ranking wird berechnet...</div>

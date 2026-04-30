@@ -70,9 +70,9 @@
     .standings td, .standings th { padding: 0.9rem 0.75rem; font-size: 1.05rem; }
     .standings th { font-size: 0.8rem; }
     .section-title { margin: 0.5rem 0; font-size: 0.85rem; }
-    .bracket-match { padding: 0.75rem 1rem; position: relative; z-index: 2; min-width: 200px; }
-    .bracket-team { padding: 0.4rem 0; font-size: 1.1rem; }
-    .bracket-score { font-size: 1.2rem; min-width: 25px; }
+    .bracket-match { padding: clamp(0.6rem, 1.2vh, 1rem) clamp(0.75rem, 1.5vw, 1.25rem); position: relative; z-index: 2; min-width: clamp(180px, 22vw, 320px); }
+    .bracket-team { padding: clamp(0.35rem, 0.8vh, 0.6rem) 0; font-size: clamp(1rem, 1.8vw, 1.8rem); }
+    .bracket-score { font-size: clamp(1.1rem, 1.9vw, 1.9rem); min-width: clamp(24px, 2.5vw, 40px); }
 
     /* Winner/loser highlighting in bracket */
     .bracket-team.winner {
@@ -86,10 +86,10 @@
     /* Bracket Connectors */
     .bracket-container {
       display: flex; align-items: center; justify-content: center; gap: 0;
-      flex: 1; width: 100%; transform: scale(1.1); /* Slightly scale up the whole tree */
+      flex: 1; width: 100%;
     }
-    .bracket-col { display: flex; flex-direction: column; gap: 4rem; position: relative; }
-    .connector-col { width: 60px; position: relative; align-self: stretch; }
+    .bracket-col { display: flex; flex-direction: column; gap: clamp(2rem, 5vh, 6rem); position: relative; }
+    .connector-col { width: clamp(48px, 5vw, 80px); position: relative; align-self: stretch; }
     
     .connector-line {
       position: absolute; border: 1px solid rgba(255,255,255,0.15);
