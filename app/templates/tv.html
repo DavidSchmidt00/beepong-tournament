@@ -335,6 +335,52 @@
       }, 4000);
     }
 
+    // ── Keep-awake: prevent FireTV / browser from sleeping ────────
+    (function keepAwake() {
+      // 1) Screen Wake Lock API (Chromium-based Silk browser supports this)
+      let wakeLock = null;
+      async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) return false;
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          return true;
+        } catch (_) { return false; }
+      }
+      requestWakeLock().then(ok => {
+        if (!ok) startFallback();
+      });
+      // Re-acquire after tab becomes visible again (wake lock releases on hide)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') requestWakeLock();
+      });
+
+      // 2) Fallback: silent AudioContext + 1-px canvas animation
+      //    Continuous audio output keeps FireTV from triggering the screensaver.
+      function startFallback() {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const gain = ctx.createGain();
+          gain.gain.value = 0; // completely silent
+          gain.connect(ctx.destination);
+          const osc = ctx.createOscillator();
+          osc.connect(gain);
+          osc.start();
+        } catch (_) {}
+
+        // Tiny canvas animation as a secondary signal
+        const canvas = document.createElement('canvas');
+        canvas.width = 1; canvas.height = 1;
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-999;';
+        document.body.appendChild(canvas);
+        const cx = canvas.getContext('2d');
+        let tick = 0;
+        setInterval(() => {
+          cx.fillStyle = (tick++ % 2) ? '#000' : '#001';
+          cx.fillRect(0, 0, 1, 1);
+        }, 500);
+      }
+    })();
+
     function showWinnerOverlay(el) {
       const overlay = document.getElementById('winner-overlay');
       const round = el.getAttribute('data-round') || 'Spiel';
