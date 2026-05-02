@@ -337,15 +337,20 @@
     }
 
     // ── Keep-awake: prevent FireTV OS screensaver / display sleep ─
-    // Two-track approach:
-    // 1) Screen Wake Lock API – no user gesture required per W3C spec
-    // 2) NoSleep.js muted-video fallback – enabled on first remote keypress
-    //    (browser autoplay policy requires a gesture for the video track)
-    // Note: if FireTV still sleeps after exactly 5 min, also set
-    // Settings → Display & Klangoption → Bildschirmschoner → Startzeit → Nie
+    // YouTube prevents FireTV sleep via the Media Session API (tells the OS
+    // "media is playing"). Combined with Wake Lock + NoSleep.js video.
     (function keepAwake() {
-      let wakeLock = null;
+      // 1) Media Session API – same signal YouTube sends to FireTV OS
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: 'Beer Pong Turnier – Live',
+          artist: 'Live-Anzeige'
+        });
+        navigator.mediaSession.playbackState = 'playing';
+      }
 
+      // 2) Screen Wake Lock API – no user gesture required per W3C spec
+      let wakeLock = null;
       async function requestWakeLock() {
         if (!('wakeLock' in navigator)) return;
         try {
@@ -355,30 +360,31 @@
           console.warn('[keep-awake] Wake Lock:', e.message);
         }
       }
+      requestWakeLock();
 
+      // 3) NoSleep.js muted-video – try immediately (muted autoplay works on
+      //    Chromium without gesture) and again on any user interaction
       const noSleep = new NoSleep();
       let noSleepActive = false;
       function enableNoSleep() {
         if (noSleepActive) return;
-        noSleep.enable().then(() => { noSleepActive = true; }).catch(() => {});
+        noSleep.enable()
+          .then(() => { noSleepActive = true; })
+          .catch(() => {});
       }
+      enableNoSleep();
+      ['mousemove', 'click', 'keydown', 'touchstart'].forEach(evt =>
+        document.addEventListener(evt, enableNoSleep, { passive: true })
+      );
 
-      // Wake Lock needs no gesture – request immediately
-      requestWakeLock();
-
-      // NoSleep video needs a user gesture in most browsers;
-      // on FireTV any remote button generates a keydown event.
-      document.addEventListener('keydown', function onFirstKey() {
-        enableNoSleep();
-        document.removeEventListener('keydown', onFirstKey);
-      });
-
-      // Re-acquire after the tab returns to foreground
-      // (Wake Lock is automatically released when the tab is hidden)
+      // 4) Re-acquire after tab returns to foreground
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          if (!wakeLock) requestWakeLock();
-        }
+        if (document.visibilityState !== 'visible') return;
+        if (!wakeLock) requestWakeLock();
+        noSleepActive = false;
+        enableNoSleep();
+        if ('mediaSession' in navigator)
+          navigator.mediaSession.playbackState = 'playing';
       });
     })();
 
