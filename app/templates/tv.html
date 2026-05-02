@@ -8,7 +8,6 @@
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nosleep.js@0.12.0/dist/NoSleep.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body {
@@ -364,96 +363,25 @@
       }, 4000);
     }
 
-    // ── Keep-awake: prevent FireTV OS screensaver / display sleep ─
-    // YouTube keeps the screen on because it has a real <video> element
-    // attached to the DOM that is actively playing. NoSleep.js does NOT
-    // append its video to the DOM, so FireTV OS ignores it.
-    // We create a genuine canvas → captureStream → <video> pipeline that
-    // mirrors what a media player does, plus Wake Lock + Media Session as
-    // belt-and-suspenders.
+    // ── Keep-awake: Screen Wake Lock API ─────────────────────────
+    // Standard W3C API supported in all modern browsers (Chrome, Firefox,
+    // Safari, Edge). Re-requests immediately on release so the lock stays
+    // held continuously while the page is visible.
     (function keepAwake() {
-
-      // 1) Media Session API – tell the OS media is playing
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Beer Pong Turnier – Live', artist: 'Live-Anzeige'
-        });
-        navigator.mediaSession.playbackState = 'playing';
-      }
-
-      // 2) Screen Wake Lock API (no user gesture required per W3C spec)
-      //    Re-request immediately on release – this is the behaviour YouTube
-      //    uses and the key detail we were missing before.
+      if (!('wakeLock' in navigator)) return;
       let wakeLock = null;
-      async function requestWakeLock() {
-        if (!('wakeLock' in navigator)) return;
+      async function request() {
         try {
           wakeLock = await navigator.wakeLock.request('screen');
           wakeLock.addEventListener('release', () => {
             wakeLock = null;
-            // OS can release the lock at any time; re-acquire while visible
-            if (document.visibilityState === 'visible') requestWakeLock();
+            if (document.visibilityState === 'visible') request();
           });
-        } catch (e) { console.warn('[keep-awake] WakeLock:', e.message); }
+        } catch (e) {}
       }
-      requestWakeLock();
-
-      // 3) Real <video> in the DOM fed by a live canvas stream.
-      //    FireTV OS detects DOM-attached playing video elements exactly
-      //    like a YouTube player, and suppresses the screensaver.
-      const canvas = document.createElement('canvas');
-      canvas.width = 2; canvas.height = 2;
-      const ctx = canvas.getContext('2d');
-      let frame = 0;
-      setInterval(() => {
-        // Alternate two near-black colours so the stream carries real frames
-        ctx.fillStyle = (frame++ % 2) ? '#010100' : '#010101';
-        ctx.fillRect(0, 0, 2, 2);
-      }, 500);
-
-      if (typeof canvas.captureStream === 'function') {
-        const vid = document.createElement('video');
-        vid.muted = true;
-        vid.loop = true;
-        vid.playsInline = true;
-        // Tiny but in the DOM and technically visible (opacity > 0)
-        vid.style.cssText = 'position:fixed;bottom:0;right:0;width:2px;height:2px;opacity:0.01;pointer-events:none;';
-        vid.srcObject = canvas.captureStream(2);
-        document.body.appendChild(vid);
-        vid.play().catch(e => console.warn('[keep-awake] video.play():', e));
-      } else {
-        // Older Silk builds without captureStream: fall back to NoSleep.js
-        const noSleep = new NoSleep();
-        let active = false;
-        function enableNoSleep() {
-          if (active) return;
-          noSleep.enable().then(() => { active = true; }).catch(() => {});
-        }
-        enableNoSleep();
-        ['mousemove', 'click', 'keydown'].forEach(e =>
-          document.addEventListener(e, enableNoSleep, { passive: true })
-        );
-      }
-
-      // 4) Real <audio> element playing a server-generated WAV at near-zero
-      //    volume (1 Hz sine, amplitude 5/32767 – inaudible, below 20 Hz
-      //    human threshold). Unlike muted or Web Audio gain=0, a playing
-      //    <audio> element routes through the OS audio pipeline, which is
-      //    how YouTube prevents the FireTV screensaver.
-      const audio = document.createElement('audio');
-      audio.src = '/keepawake.wav';
-      audio.loop = true;
-      audio.volume = 0.1;  // not muted – needed for OS pipeline engagement
-      document.body.appendChild(audio);
-      audio.play().catch(() => {});
-
-      // Re-acquire after tab returns to foreground
+      request();
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') return;
-        if (!wakeLock) requestWakeLock();
-        if (audio.paused) audio.play().catch(() => {});
-        if ('mediaSession' in navigator)
-          navigator.mediaSession.playbackState = 'playing';
+        if (document.visibilityState === 'visible' && !wakeLock) request();
       });
     })();
 
