@@ -1,5 +1,9 @@
+import io
+import math
 import os
 import random
+import struct
+import wave
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -527,6 +531,34 @@ def _generate_ko_matches(tournament: Tournament, db: Session) -> None:
             group=ks["group"],
             status=ks["status"],
         ))
+
+
+# ── Keep-awake audio ─────────────────────────────────────────────────────────
+# 10-second WAV: 1 Hz sine at amplitude 5/32767 – physically inaudible
+# (1 Hz is well below the 20 Hz human hearing threshold), but the <audio>
+# element is genuinely "playing" through the OS audio pipeline, which is
+# what prevents FireTV's screensaver – the same reason YouTube keeps it awake.
+
+@app.get("/keepawake.wav")
+def keepawake_wav():
+    sample_rate = 8000
+    duration = 10
+    num_frames = sample_rate * duration
+    samples = struct.pack(
+        "<" + "h" * num_frames,
+        *[round(5 * math.sin(2 * math.pi * i / sample_rate)) for i in range(num_frames)],
+    )
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sample_rate)
+        w.writeframes(samples)
+    return Response(
+        content=buf.getvalue(),
+        media_type="audio/wav",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 # ── TV + partial routes ───────────────────────────────────────────────────────
