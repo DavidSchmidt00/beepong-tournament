@@ -336,16 +336,49 @@
       }, 4000);
     }
 
-    // ── Keep-awake: prevent FireTV / browser from sleeping ────────
-    // NoSleep.js plays a tiny looping muted video – FireTV OS recognises
-    // active media playback and suppresses the system-level screensaver.
-    // Falls back to Wake Lock API on browsers that support it.
+    // ── Keep-awake: prevent FireTV OS screensaver / display sleep ─
+    // Two-track approach:
+    // 1) Screen Wake Lock API – no user gesture required per W3C spec
+    // 2) NoSleep.js muted-video fallback – enabled on first remote keypress
+    //    (browser autoplay policy requires a gesture for the video track)
+    // Note: if FireTV still sleeps after exactly 5 min, also set
+    // Settings → Display & Klangoption → Bildschirmschoner → Startzeit → Nie
     (function keepAwake() {
+      let wakeLock = null;
+
+      async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) return;
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => { wakeLock = null; });
+        } catch (e) {
+          console.warn('[keep-awake] Wake Lock:', e.message);
+        }
+      }
+
       const noSleep = new NoSleep();
-      function enable() { noSleep.enable().catch(() => {}); }
-      enable();
+      let noSleepActive = false;
+      function enableNoSleep() {
+        if (noSleepActive) return;
+        noSleep.enable().then(() => { noSleepActive = true; }).catch(() => {});
+      }
+
+      // Wake Lock needs no gesture – request immediately
+      requestWakeLock();
+
+      // NoSleep video needs a user gesture in most browsers;
+      // on FireTV any remote button generates a keydown event.
+      document.addEventListener('keydown', function onFirstKey() {
+        enableNoSleep();
+        document.removeEventListener('keydown', onFirstKey);
+      });
+
+      // Re-acquire after the tab returns to foreground
+      // (Wake Lock is automatically released when the tab is hidden)
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') enable();
+        if (document.visibilityState === 'visible') {
+          if (!wakeLock) requestWakeLock();
+        }
       });
     })();
 
