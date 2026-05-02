@@ -382,12 +382,18 @@
       }
 
       // 2) Screen Wake Lock API (no user gesture required per W3C spec)
+      //    Re-request immediately on release – this is the behaviour YouTube
+      //    uses and the key detail we were missing before.
       let wakeLock = null;
       async function requestWakeLock() {
         if (!('wakeLock' in navigator)) return;
         try {
           wakeLock = await navigator.wakeLock.request('screen');
-          wakeLock.addEventListener('release', () => { wakeLock = null; });
+          wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+            // OS can release the lock at any time; re-acquire while visible
+            if (document.visibilityState === 'visible') requestWakeLock();
+          });
         } catch (e) { console.warn('[keep-awake] WakeLock:', e.message); }
       }
       requestWakeLock();
