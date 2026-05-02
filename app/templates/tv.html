@@ -337,52 +337,74 @@
     }
 
     // ── Keep-awake: prevent FireTV OS screensaver / display sleep ─
-    // YouTube prevents FireTV sleep via the Media Session API (tells the OS
-    // "media is playing"). Combined with Wake Lock + NoSleep.js video.
+    // YouTube keeps the screen on because it has a real <video> element
+    // attached to the DOM that is actively playing. NoSleep.js does NOT
+    // append its video to the DOM, so FireTV OS ignores it.
+    // We create a genuine canvas → captureStream → <video> pipeline that
+    // mirrors what a media player does, plus Wake Lock + Media Session as
+    // belt-and-suspenders.
     (function keepAwake() {
-      // 1) Media Session API – same signal YouTube sends to FireTV OS
+
+      // 1) Media Session API – tell the OS media is playing
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
-          title: 'Beer Pong Turnier – Live',
-          artist: 'Live-Anzeige'
+          title: 'Beer Pong Turnier – Live', artist: 'Live-Anzeige'
         });
         navigator.mediaSession.playbackState = 'playing';
       }
 
-      // 2) Screen Wake Lock API – no user gesture required per W3C spec
+      // 2) Screen Wake Lock API (no user gesture required per W3C spec)
       let wakeLock = null;
       async function requestWakeLock() {
         if (!('wakeLock' in navigator)) return;
         try {
           wakeLock = await navigator.wakeLock.request('screen');
           wakeLock.addEventListener('release', () => { wakeLock = null; });
-        } catch (e) {
-          console.warn('[keep-awake] Wake Lock:', e.message);
-        }
+        } catch (e) { console.warn('[keep-awake] WakeLock:', e.message); }
       }
       requestWakeLock();
 
-      // 3) NoSleep.js muted-video – try immediately (muted autoplay works on
-      //    Chromium without gesture) and again on any user interaction
-      const noSleep = new NoSleep();
-      let noSleepActive = false;
-      function enableNoSleep() {
-        if (noSleepActive) return;
-        noSleep.enable()
-          .then(() => { noSleepActive = true; })
-          .catch(() => {});
-      }
-      enableNoSleep();
-      ['mousemove', 'click', 'keydown', 'touchstart'].forEach(evt =>
-        document.addEventListener(evt, enableNoSleep, { passive: true })
-      );
+      // 3) Real <video> in the DOM fed by a live canvas stream.
+      //    FireTV OS detects DOM-attached playing video elements exactly
+      //    like a YouTube player, and suppresses the screensaver.
+      const canvas = document.createElement('canvas');
+      canvas.width = 2; canvas.height = 2;
+      const ctx = canvas.getContext('2d');
+      let frame = 0;
+      setInterval(() => {
+        // Alternate two near-black colours so the stream carries real frames
+        ctx.fillStyle = (frame++ % 2) ? '#010100' : '#010101';
+        ctx.fillRect(0, 0, 2, 2);
+      }, 500);
 
-      // 4) Re-acquire after tab returns to foreground
+      if (typeof canvas.captureStream === 'function') {
+        const vid = document.createElement('video');
+        vid.muted = true;
+        vid.loop = true;
+        vid.playsInline = true;
+        // Tiny but in the DOM and technically visible (opacity > 0)
+        vid.style.cssText = 'position:fixed;bottom:0;right:0;width:2px;height:2px;opacity:0.01;pointer-events:none;';
+        vid.srcObject = canvas.captureStream(2);
+        document.body.appendChild(vid);
+        vid.play().catch(e => console.warn('[keep-awake] video.play():', e));
+      } else {
+        // Older Silk builds without captureStream: fall back to NoSleep.js
+        const noSleep = new NoSleep();
+        let active = false;
+        function enableNoSleep() {
+          if (active) return;
+          noSleep.enable().then(() => { active = true; }).catch(() => {});
+        }
+        enableNoSleep();
+        ['mousemove', 'click', 'keydown'].forEach(e =>
+          document.addEventListener(e, enableNoSleep, { passive: true })
+        );
+      }
+
+      // Re-acquire after tab returns to foreground
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
         if (!wakeLock) requestWakeLock();
-        noSleepActive = false;
-        enableNoSleep();
         if ('mediaSession' in navigator)
           navigator.mediaSession.playbackState = 'playing';
       });
