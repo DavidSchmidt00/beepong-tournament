@@ -156,8 +156,16 @@
 
   <div class="tv-header">
     <h1 id="tv-tournament-title">🍺 {{ tournament.title if tournament else 'Beer Pong Turnier' }}</h1>
-    <div class="live-indicator" style="margin: 0;">
-      <span class="live-dot"></span> Live
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <button id="fullscreen-btn" title="Vollbild" onclick="toggleFullscreen()" style="
+        background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);
+        color:var(--text-muted);border-radius:var(--radius-sm);
+        padding:0.35rem 0.65rem;cursor:pointer;font-size:1rem;line-height:1;
+        transition:background 0.2s,color 0.2s;
+      ">⛶</button>
+      <div class="live-indicator" style="margin: 0;">
+        <span class="live-dot"></span> Live
+      </div>
     </div>
   </div>
 
@@ -180,6 +188,26 @@
   </div>
 
   <script>
+    // ── Fullscreen ─────────────────────────────────────────────
+    function toggleFullscreen() {
+      const el = document.documentElement;
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!isFs) {
+        (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      }
+    }
+    function updateFullscreenBtn() {
+      const btn = document.getElementById('fullscreen-btn');
+      if (!btn) return;
+      const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+      btn.textContent = isFs ? '✕' : '⛶';
+      btn.title = isFs ? 'Vollbild beenden' : 'Vollbild';
+    }
+    document.addEventListener('fullscreenchange', updateFullscreenBtn);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+
     // ── Slideshow ──────────────────────────────────────────────
     let currentSlide = 0;
     let progress = 0;
